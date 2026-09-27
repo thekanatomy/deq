@@ -1,0 +1,27 @@
+body {  
+  margin : 0 ;
+  font-family: -apple-system, system-ui, sans-serif;
+  background : #f5f5f7
+}
+
+.page {
+  min-height: 100vh;
+  display : flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card {
+  background: white;
+  padding: 32px;
+  border-radius: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  transition: transform 0.2s, box-shadow 0.2s;
+  width: 400 px;
+  aspect-ratio: 5/10;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+}
