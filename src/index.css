@@ -15,7 +15,7 @@ body {
   background: white;
   padding: 32px;
   border-radius: 20px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 12px rgba(250, 250, 250, 0.06);
   transition: transform 0.2s, box-shadow 0.2s;
   width: 400 px;
   aspect-ratio: 5/10;
