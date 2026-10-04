@@ -1,12 +1,15 @@
+import { useLiveQuery } from 'dexie-react-hooks'
+import { db } from './db'
 import { useState } from "react"
 
 
 export default function App() {
-  const [people, setPeople] = useState([])
+  const people = useLiveQuery(() => db.cards.toArray())
 const [name, setName] =  useState("")
 
-function addPerson(){
-  setPeople([...people, {name: name, place: "Tempe", days: 0}])
+async function addPerson() {
+  await db.cards.add({ name: name, place: "Tempe", lastContacted: Date.now() })
+  setName("")
 }
 
   return (
@@ -14,7 +17,7 @@ function addPerson(){
       <input  value = {name} onChange = {e => setName (e.target.value)} />
       <button onClick = {addPerson}>Add</button>
 
-      {people.map(person =>(
+      {people?.map(person =>(
       <div className =  "card" key = {person.name}>
         <h2> {person.name}</h2>
 
