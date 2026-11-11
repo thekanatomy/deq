@@ -110,7 +110,7 @@ function DeqCard({ person, interactive = true, open = true }) {
     event.target.value = ''
     if (!file) return
     setReading(true)
-    const found = await readPhoto(await shrinkPhoto(file, 1280))
+    const found = await readPhoto(await shrinkPhoto(file, 1024))
     setReading(false)
     setContact(current => ({
       linkedin: found.linkedin || current.linkedin,

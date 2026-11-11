@@ -20,7 +20,8 @@ export async function readPhoto(blob, { signal } = {}) {
       body: JSON.stringify({ image: await toBase64(blob), mimeType: blob.type || 'image/jpeg' }),
       signal,
     })
-    if (!response.ok) return {}
+    // 429 / 503: every AI is at its limit or busy right now
+    if (!response.ok) return [429, 503].includes(response.status) ? { busy: true } : {}
     return await response.json()
   } catch {
     return {}

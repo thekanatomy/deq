@@ -6,6 +6,8 @@ import { frameToBlob, shrinkPhoto } from './photo'
 import { parseScan } from './scan'
 
 const SCAN_EVERY_MS = 140
+// what the AI reads: big enough for small print, small enough to keep each scan cheap
+const SCAN_SIZE = 1024
 
 // Reads a QR code from the middle of a video frame or a still image.
 function readQR(source, width, height, canvas) {
@@ -88,7 +90,7 @@ export default function Scanner({ onResult, onType, onClose }) {
     const video = videoRef.current
     if (status !== 'live' || !video.videoWidth) return fileRef.current.click()
     const text = readQR(video, video.videoWidth, video.videoHeight, canvasRef.current)
-    const [photo, scanImage] = await Promise.all([frameToBlob(video), frameToBlob(video, 1280)])
+    const [photo, scanImage] = await Promise.all([frameToBlob(video), frameToBlob(video, SCAN_SIZE)])
     finish({ photo, scanImage, ...(text ? parseScan(text) : {}) })
   }
 
@@ -100,7 +102,7 @@ export default function Scanner({ onResult, onType, onClose }) {
     const bitmap = await createImageBitmap(file)
     const text = readQR(bitmap, bitmap.width, bitmap.height, canvasRef.current)
     bitmap.close()
-    const [photo, scanImage] = await Promise.all([shrinkPhoto(file), shrinkPhoto(file, 1280)])
+    const [photo, scanImage] = await Promise.all([shrinkPhoto(file), shrinkPhoto(file, SCAN_SIZE)])
     finish({ photo, scanImage, ...(text ? parseScan(text) : {}) })
   }
 

@@ -5,6 +5,7 @@ import { BackIcon, CloseIcon } from './icons'
 import { detectPlace } from './location'
 import { parseScan } from './scan'
 import { readPhoto } from './vision'
+import { cropFace } from './face'
 
 // Adding someone in a few taps, one question at a time. Names come from the QR or a
 // pasted LinkedIn link, the place comes from your location, two sliders replace typing,
@@ -51,7 +52,7 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
   const [direction, setDirection] = useState(1)
   const [locating, setLocating] = useState(initial.place ? 'idle' : 'finding') // idle | finding | found | failed | elsewhere
   const needsReading = Boolean(initial.scanImage) && !(initial.name && initial.company)
-  const [reading, setReading] = useState(needsReading ? 'reading' : 'idle') // idle | reading | read | failed
+  const [reading, setReading] = useState(needsReading ? 'reading' : 'idle') // idle | reading | read | failed | busy
   const [readFrom, setReadFrom] = useState('')
   const inputRef = useRef(null)
   const foundRef = useRef(null) // the place the phone found, to switch back to
@@ -62,19 +63,37 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
     fieldsRef.current = fields
   })
 
+  // Find their face in the scan at the same time as the AI reads it: a face becomes
+  // the avatar, cut out like a profile picture.
+  const faceRef = useRef(null)
+  useEffect(() => {
+    if (!initial.scanImage) return
+    let cancelled = false
+    cropFace(initial.scanImage).then(face => {
+      if (cancelled || !face) return
+      faceRef.current = face
+      setFields(previous => ({ ...previous, photo: face }))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [initial.scanImage])
+
   // Read the photo with the AI. Only empty answers are filled, so nothing you typed is overwritten.
   useEffect(() => {
     if (!needsReading) return
     const controller = new AbortController()
     readPhoto(initial.scanImage, { signal: controller.signal }).then(found => {
       if (controller.signal.aborted) return
-      const { kind, ...details } = found
+      const { kind, busy, ...details } = found
+      if (busy) return setReading('busy')
       if (!details.name && !details.company) return setReading('failed')
       const previous = fieldsRef.current
       const filled = { ...previous }
       for (const [key, value] of Object.entries(details)) if (!String(previous[key] ?? '').trim()) filled[key] = value
-      // a photo of a card or a screen isn't their face, so it doesn't become the avatar
-      if (kind && kind !== 'person') delete filled.photo
+      // a found face is the avatar; otherwise a card or a screen isn't their face
+      if (faceRef.current) filled.photo = faceRef.current
+      else if (kind && kind !== 'person') delete filled.photo
       setFields(filled)
       setReadFrom(SOURCES[kind] ?? SOURCES.other)
       setReading('read')
@@ -234,6 +253,7 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
                   </p>
                 )}
                 {reading === 'failed' && <p className="answer-hint">Couldn’t read a name from the photo.</p>}
+                {reading === 'busy' && <p className="answer-hint">Photo reading is busy right now. Type the name for this one.</p>}
                 {fields.linkedin && <p className="answer-hint">LinkedIn linked ✓</p>}
               </>
             )}

@@ -2602,11 +2602,19 @@ h1.wordmark {
   font-weight: var(--weight-bold);
 }
 
-.categories-group {
-  margin: 2.25rem 0 0.5rem;
-  color: var(--label-secondary);
-  font-size: var(--size-callout);
-  font-weight: var(--weight-bold);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+/* a long company or place name never pushes the count off the row */
+.category-row .category-name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-row .menu-detail {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

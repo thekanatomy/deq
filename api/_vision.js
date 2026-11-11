@@ -2,11 +2,16 @@
 // Shared by the Vercel function (api/scan.js) and the local dev server (vite.config.js).
 // The API key only ever lives here on the server, never in the phone's code.
 //
-// Uses Groq when GROQ_API_KEY is set (free, no card, doesn't train on your photos),
-// otherwise Gemini when GEMINI_API_KEY is set.
+// Tries readers in order until one answers:
+//   1. Gemini 3.1 Flash-Lite (GEMINI_API_KEY): free tier, stable.
+//   2. A second Gemini model on the same key: busy or rate-limited models are
+//      counted separately, so one being down rarely means both are.
+//   3. Groq (GROQ_API_KEY).
+// A model that's only briefly overloaded (503) gets one quick retry first.
 
 const GROQ_MODEL = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b'
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite'
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite'
+const GEMINI_BACKUP_MODEL = process.env.GEMINI_BACKUP_MODEL || 'gemini-3.5-flash'
 
 const PROMPT = `You help someone save a person they just met at an event.
 Look at the photo. It may be a business card, a conference badge, a LinkedIn or other profile on a screen, a name tag, a slide, or just the person's face.
@@ -51,7 +56,33 @@ export async function readPhoto({ image, mimeType = 'image/jpeg' } = {}) {
   if (image.length > MAX_BASE64) throw new VisionError(413, 'Photo is too large')
   if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(mimeType)) throw new VisionError(400, 'Unsupported image type')
 
-  const text = groqKey ? await askGroq(image, mimeType, groqKey) : await askGemini(image, mimeType, geminiKey)
+  const readers = [
+    geminiKey && { name: `Gemini (${GEMINI_MODEL})`, read: () => askGemini(GEMINI_MODEL, image, mimeType, geminiKey) },
+    geminiKey && GEMINI_BACKUP_MODEL && {
+      name: `Gemini (${GEMINI_BACKUP_MODEL})`,
+      read: () => askGemini(GEMINI_BACKUP_MODEL, image, mimeType, geminiKey),
+    },
+    groqKey && { name: `Groq (${GROQ_MODEL})`, read: () => askGroq(image, mimeType, groqKey) },
+  ].filter(Boolean)
+  let text
+  let lastError
+  for (const reader of readers) {
+    const started = Date.now()
+    try {
+      text = await reader.read().catch(async error => {
+        // 503 means "busy right now": wait a moment and ask the same model once more
+        if (error.status !== 503) throw error
+        await new Promise(resolve => setTimeout(resolve, 700))
+        return reader.read()
+      })
+      // shows in the dev terminal and in Vercel's logs: which AI answered, and how fast
+      console.log(`Scan read by ${reader.name} in ${((Date.now() - started) / 1000).toFixed(1)}s`)
+      break
+    } catch (error) {
+      lastError = error
+    }
+  }
+  if (text === undefined) throw lastError
   let parsed
   try {
     parsed = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ''))
@@ -60,6 +91,10 @@ export async function readPhoto({ image, mimeType = 'image/jpeg' } = {}) {
   }
   return clean(parsed)
 }
+
+// Groq's free daily limit is counted per model, so when one model is used up for the
+// day, try the next: GROQ_FALLBACK_MODELS=model-a,model-b (optional).
+const GROQ_FALLBACKS = (process.env.GROQ_FALLBACK_MODELS || '').split(',').map(model => model.trim()).filter(Boolean)
 
 async function call(name, url, headers, body) {
   const response = await fetch(url, {
@@ -71,14 +106,26 @@ async function call(name, url, headers, body) {
   if (!response.ok) {
     const detail = await response.text().catch(() => '')
     console.error(`${name} error`, response.status, detail.slice(0, 500))
-    throw new VisionError(502, `${name} returned ${response.status}`)
+    // 429: the free daily limit is used up. 503: busy right now. Both are passed on.
+    throw new VisionError([429, 503].includes(response.status) ? response.status : 502, `${name} returned ${response.status}`)
   }
   return response.json()
 }
 
 async function askGroq(image, mimeType, apiKey) {
+  for (const [index, model] of [GROQ_MODEL, ...GROQ_FALLBACKS].entries()) {
+    try {
+      return await askGroqModel(model, image, mimeType, apiKey)
+    } catch (error) {
+      const last = index === GROQ_FALLBACKS.length
+      if (error.status !== 429 || last) throw error
+    }
+  }
+}
+
+async function askGroqModel(model, image, mimeType, apiKey) {
   const data = await call('Groq', 'https://api.groq.com/openai/v1/chat/completions', { Authorization: `Bearer ${apiKey}` }, {
-    model: GROQ_MODEL,
+    model,
     temperature: 0,
     response_format: { type: 'json_object' },
     messages: [
@@ -94,10 +141,10 @@ async function askGroq(image, mimeType, apiKey) {
   return data.choices?.[0]?.message?.content ?? ''
 }
 
-async function askGemini(image, mimeType, apiKey) {
+async function askGemini(model, image, mimeType, apiKey) {
   const data = await call(
     'Gemini',
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
     { 'x-goog-api-key': apiKey },
     {
       contents: [{ role: 'user', parts: [{ text: PROMPT }, { inline_data: { mime_type: mimeType, data: image } }] }],
