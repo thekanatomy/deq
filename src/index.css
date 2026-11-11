@@ -242,36 +242,72 @@ button {
 
 /* ---------- the card ---------- */
 
-/* The card scales as one object, like a real card: everything inside is sized in cqw,
-   measured from the Illustrator design (282 px wide, so 1cqw = 2.82 px there). */
+/* The card scales as one object: everything inside is sized in cqw (% of its width).
+   Its outline is Apple's continuous corner (a clip path set by DeqCard), so the shadow
+   lives on the frame around it, where it follows that exact shape. */
+.xcard-frame {
+  filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.16)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+}
+
 .xcard {
   container-type: inline-size;
   position: relative;
-  display: flex;
-  flex-direction: column;
   width: 100%;
   aspect-ratio: 5 / 7;
   box-sizing: border-box;
-  border-radius: 3cqw;
+  border-radius: 8.5cqw; /* until the squircle path is measured */
   overflow: hidden;
+  isolation: isolate;
   color: var(--card-ink, #fff);
-  background: var(--card-background, var(--deq-gradient));
-  /* hairline stroke around the card, plus a soft ambient shadow */
-  box-shadow:
-    0 0 0 0.5px rgba(0, 0, 0, 0.6),
-    0 1px 2px rgba(0, 0, 0, 0.04),
-    0 12px 32px -12px rgba(0, 0, 0, 0.18);
-  /* a barely visible shadow keeps white text readable over the light cyan corner */
-  text-shadow: var(--card-text-shadow, 0 0.5px 1px rgba(0, 0, 0, 0.12));
+  background: var(--card-base, #0d2238);
 }
 
-/* padding lives on an inner layer so every cqw inside means "% of the card's full width" */
+/* Apple Music: the colours are blurred into one glowing surface */
+.xcard-mesh {
+  position: absolute;
+  inset: -25%;
+  z-index: -2;
+  background: var(--card-background);
+  filter: blur(9cqw) saturate(1.15);
+}
+
+/* a whisper of film grain, so the gradient feels printed rather than digital */
+.xcard-grain {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* hairline light catching the edge of the card */
+.xcard-edge {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.xcard-edge path {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.18);
+  stroke-width: 1.5;
+}
+
 .xcard-body {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  padding: 5cqw 5.3cqw 6.5cqw;
+  padding: 5.5cqw 6cqw 6.5cqw;
   box-sizing: border-box;
+}
+
+.xcard-body.open {
+  padding: 7cqw 7cqw 7.5cqw;
 }
 
 .xcard-top {
@@ -296,11 +332,17 @@ button {
   height: 10cqw;
   overflow: hidden;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.88);
   color: #1d1d1f;
-  text-shadow: none;
-  font-size: var(--card-small);
-  font-weight: var(--weight-bold);
+  font-size: 3.6cqw;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.open .avatar {
+  width: 12cqw;
+  height: 12cqw;
+  font-size: 4.4cqw;
 }
 
 .avatar img {
@@ -309,164 +351,186 @@ button {
   object-fit: cover;
 }
 
-.xcard-role {  font-size: max(0.6875rem, var(--card-small));
-  font-weight: var(--weight-bold);
-  letter-spacing: 0;
+.avatar-button {
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+.avatar-button:active {
+  transform: scale(0.94);
+}
+
+.xcard-role {
+  font-size: max(0.6875rem, 3.6cqw);
+  font-weight: 600;
+  color: var(--card-ink-soft);
 }
 
 .xcard-company {
   white-space: nowrap;
-  font-size: var(--card-text);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--track-tight);
+  font-size: 5.4cqw;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
+.xcard-company.big {
+  font-size: 6cqw;
+}
+
+/* strip: name and days, readable in the 39% of the card that shows in the stack */
 .xcard-name {
-  margin: 1cqw 0 0;
-  line-height: 1.15;
-  font-family: var(--font-display);
-  font-size: var(--card-name);
-  font-weight: var(--weight-bold);
-  letter-spacing: -0.03em;
+  margin: 2cqw 0 0;
+  line-height: 1.1;
+  font-size: 8.6cqw;
+  font-weight: 700;
+  letter-spacing: -0.035em;
 }
 
 .xcard-days {
+  margin: 1.6cqw 0 0;
   font-variant-numeric: tabular-nums;
+  font-size: 6.4cqw;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.xcard-channel {
+  font-size: 3.6cqw;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--card-ink-soft);
+}
+
+/* layout A: the opened card */
+.xcard-hero {
+  margin: auto 0 0;
+  font-size: 13cqw;
+  font-weight: 750;
+  line-height: 0.95;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.xcard-sub {
   margin: 2.5cqw 0 0;
-  line-height: 1.25;
-  font-size: var(--card-days);
-  font-weight: var(--weight-text);
-  letter-spacing: var(--track-tight);
-}
-
-.xcard-channel {  font-size: var(--card-caps);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--track-caps);
-  text-transform: uppercase;
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2cqw;
-  margin-top: 4cqw;
-}
-
-/* white tag-style button: UPDATE, the contact choices, SAVE */
-.chip {
-  align-self: flex-start;
-  height: 11cqw;
-  min-height: 32px;
-  padding: 0 4cqw;
-  border: 0;
-  border-radius: 2.2cqw;
-  background: white;
-  color: black;
-  text-shadow: none;
-  cursor: pointer;
-  transition: transform 160ms var(--ease-out);
-  font-size: max(0.75rem, var(--card-caps));
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--track-caps);
-  text-transform: uppercase;
-}
-
-.xcard-body > .chip {
-  margin-top: 5.2cqw;
+  font-size: 4.6cqw;
+  color: var(--card-ink-soft);
 }
 
 .xcard-met {
-  margin: 1.8cqw 0 0;
-  font-size: var(--card-text);
-  font-weight: var(--weight-text);
-  letter-spacing: var(--track-tight);
+  margin: 1.2cqw 0 0;
+  font-size: 4cqw;
+  color: var(--card-ink-soft);
 }
 
-.xcard-spacer {
-  flex: 1;
+.xcard-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 3cqw;
+  margin-top: 8cqw;
+  min-height: 14cqw;
 }
 
-.xcard-label {
-  margin: 0 0 3cqw;
-  font-size: max(0.6875rem, var(--card-caps));
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--track-caps);
-  text-transform: uppercase;
-}
-
-.chip:active,
-.contact:active {
-  transform: scale(0.96);
-}
-
-.contact-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2.5cqw;
-}
-
-.contact {
-  display: grid;
-  place-items: center;
-  height: 13.5cqw;
-  min-height: 44px;
+.xcard-days-big {
+  padding: 0;
   border: 0;
-  border-radius: 3cqw;
-  background: white;
-  text-decoration: none;
-  text-shadow: none;
+  background: none;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
-  transition: transform 160ms var(--ease-out);
-  font-size: max(0.75rem, var(--card-caps));
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--track-caps);
-  text-transform: uppercase;
+  font-size: 11cqw;
+  font-weight: 750;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  transition: opacity 160ms var(--ease-out);
 }
 
-.contact.linkedin {
-  color: #0a66c2; /* LinkedIn blue, 5.6:1 on white */
+.xcard-days-big small {
+  display: block;
+  margin-top: 1.6cqw;
+  font-size: 3.4cqw;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
 }
 
-.contact.mail {
-  color: #d70015; /* stays the light-mode red: the button is always white */
+.xcard-days-big:active {
+  opacity: 0.6;
 }
 
-.contact.plus {
-  color: black;
+.xcard-ask {
+  margin: 0;
+  font-size: 4cqw;
+  font-weight: 600;
+  color: var(--card-ink-soft);
 }
 
-.contact.plus svg {
-  width: 9cqw;
-  height: 9cqw;
+.xcard-foot:has(.xcard-ask) {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.xcard-actions {
+  display: flex;
+  gap: 2cqw;
+}
+
+.xcard-actions.wrap {
+  flex-wrap: wrap;
+}
+
+/* frosted buttons on the card, like Apple Music's controls */
+.glass-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.2cqw;
+  min-height: 36px;
+  padding: 0 4cqw;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  font-size: max(0.75rem, 3.8cqw);
+  font-weight: 600;
+  transition: transform 160ms var(--ease-out), background 160ms var(--ease-out);
+}
+
+.glass-pill:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.glass-pill.solid {
+  justify-content: center;
+  background: #fff;
+  color: #1d1d1f;
 }
 
 .xcard-edit {
   display: grid;
   gap: 2cqw;
+  margin-top: 6cqw;
 }
 
 .xcard-edit input {
-  padding: 2.8cqw 3.2cqw;
+  padding: 2.8cqw 3.6cqw;
   border: 0;
-  border-radius: 2.2cqw;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1d1d1f;
   font: inherit;
-  text-shadow: none;
-  font-size: var(--size-body);
-  font-weight: var(--weight-text);
-}
-
-.xcard-edit .chip {
-  width: 100%;
-}
-
-.share {
-  align-self: flex-start;
-  margin-top: 11cqw;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--card-ink-soft, rgba(255, 255, 255, 0.22));
-  cursor: pointer;
+  font-size: 16px; /* 16px stops iPhone zooming in on focus */
 }
 
 .share svg {
@@ -1672,4 +1736,294 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .reading, .reading-dot { animation: none; }
+}
+
+/* ---------- sign in: "Save your deq" sheet and Account page ---------- */
+.save-sheet {
+  background: var(--bg);
+  text-align: center;
+  touch-action: auto;
+}
+
+.save-title {
+  margin: 0.5rem 0 0.5rem;
+  font-size: var(--size-title);
+  font-weight: var(--weight-title);
+  letter-spacing: -0.03em;
+}
+
+.save-text {
+  max-width: 22rem;
+  margin: 0 auto 1.5rem;
+  color: var(--label-secondary);
+  font-size: var(--size-body);
+  line-height: 1.45;
+}
+
+.save-later {
+  display: block;
+  margin: 0.25rem auto 0;
+}
+
+.signin {
+  display: grid;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  min-height: 52px;
+  border: 1px solid var(--separator);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--label);
+  font-size: var(--size-body);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+.google-button:active {
+  transform: scale(0.97);
+}
+
+.signin-or {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.25rem 0;
+  color: var(--label-secondary);
+  font-size: var(--size-caption);
+}
+
+.signin-or::before,
+.signin-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--separator);
+}
+
+.signin-email {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.signin-email .answer {
+  font-size: var(--size-body);
+  text-align: center;
+}
+
+.signin-error {
+  margin: 0;
+  color: var(--red);
+  font-size: var(--size-callout);
+  font-weight: var(--weight-bold);
+  text-align: center;
+}
+
+.signin-sent {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  color: var(--tint-fill);
+}
+
+.signin-sent-title {
+  margin: 0;
+  color: var(--label);
+  font-size: 1.25rem;
+  font-weight: var(--weight-bold);
+}
+
+.signin-sent-text {
+  max-width: 20rem;
+  margin: 0;
+  color: var(--label-secondary);
+  font-size: var(--size-body);
+  line-height: 1.45;
+  text-align: center;
+}
+
+.menu-status {
+  margin: 0 0 0.5rem;
+  color: var(--label-secondary);
+  font-size: var(--size-callout);
+  font-weight: var(--weight-bold);
+}
+
+.menu-signout {
+  display: block;
+  margin: 0.75rem auto 0;
+  color: var(--red);
+}
+
+.menu-page .signin {
+  margin: 1.5rem 0 0;
+}
+
+/* ---------- welcome: the first screen (empty deck) ---------- */
+.welcome {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+  overflow-x: clip;
+  margin-inline: -1.375rem;   /* let the fan run to the screen edges */
+  padding-inline: 1.375rem;
+}
+
+.welcome-fan {
+  position: relative;
+  height: min(58vw, 15rem);
+  margin-bottom: 3.5rem;
+}
+
+.welcome-card {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 58%;
+  margin-left: -29%;
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.14));
+  pointer-events: none;
+}
+
+.welcome-card:nth-child(3) {
+  z-index: 2;
+}
+
+.welcome-copy {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  justify-items: start;
+  gap: 1rem;
+  padding-top: 1.5rem;
+  background: linear-gradient(to bottom, transparent, var(--bg) 1.5rem);
+}
+
+.welcome-title {
+  margin: 0;
+  font-size: clamp(3.25rem, 15vw, 4.5rem);
+  font-weight: var(--weight-title);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.welcome-text {
+  max-width: 21rem;
+  margin: 0;
+  color: var(--label-secondary);
+  font-size: var(--size-body);
+  line-height: 1.45;
+}
+
+.welcome-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.875rem;
+  margin-top: 0.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--label);
+  font-size: 1.125rem;
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+.welcome-plus {
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  background: var(--label);
+  color: var(--bg);
+  transition: transform 160ms var(--ease-out);
+}
+
+.welcome-add:active .welcome-plus {
+  transform: scale(0.94);
+}
+
+.welcome-signin {
+  padding: 0;
+  font-size: var(--size-callout);
+}
+
+/* short phones (iPhone SE, mini): keep the button on screen */
+@media (max-height: 760px) {
+  .welcome { gap: 1rem; margin-top: 0; }
+  .welcome-fan { height: 10rem; margin-bottom: 1.5rem; }
+  .welcome-card { width: 46%; margin-left: -23%; }
+  .welcome-title { font-size: 3.25rem; }
+  .welcome-copy { gap: 0.75rem; padding-top: 1rem; }
+  .welcome-plus { width: 3.75rem; height: 3.75rem; }
+}
+
+/* the big "deq" on the welcome screen */
+h1.wordmark {
+  margin: 0.25rem 0 0;
+  font-size: clamp(6rem, 34vw, 9rem);
+  font-weight: 850;
+  line-height: 0.8;
+  letter-spacing: -0.075em;
+  margin-left: -0.06em; /* optical: line the "d" up with the text below */
+}
+
+@media (max-height: 760px) {
+  h1.wordmark { font-size: 5.5rem; }
+}
+
+/* the title and summary fold away when a card opens (Wallet) */
+.top-title {
+  overflow: hidden;
+}
+
+/* ---------- long text never breaks a card ---------- */
+.xcard-who {
+  flex: 1 1 auto;
+}
+
+.xcard-role,
+.xcard-name,
+.xcard-sub,
+.xcard-met,
+.xcard-company {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.xcard-company {
+  flex: 0 1 auto;
+  max-width: 48%;
+  text-align: right;
+}
+
+.xcard-company.big {
+  max-width: 70%;
+  text-align: left;
+}
+
+/* names wrap onto two lines at most, and long names get a size down */
+.xcard-hero {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.xcard-hero.long {
+  font-size: 10.5cqw;
 }

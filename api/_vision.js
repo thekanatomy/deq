@@ -13,7 +13,7 @@ Look at the photo. It may be a business card, a conference badge, a LinkedIn or 
 Fill in only what you can actually read in the photo. Never guess or invent anything; leave a field as an empty string if it is not visible.
 kind: "card" for a business card, "badge" for a badge or name tag, "screen" for a phone or laptop screen, "person" if it is mainly a photo of a person, "other" otherwise.
 name: the person's full name, in normal capitalisation (not ALL CAPS).
-role: their job title or what they study. company: their company, university or organisation.
+role: their job title or what they study, short (at most 4 words, e.g. "Product Designer", "MS Computer Science student"), never a whole headline. company: their company, university or organisation, as people say it ("ASU" is fine for Arizona State University).
 linkedin: a full https://www.linkedin.com/in/... link if a LinkedIn handle or URL is visible.
 email, phone, website: exactly as printed.
 Reply with only a JSON object with exactly these keys: kind, name, role, company, email, phone, linkedin, website.`

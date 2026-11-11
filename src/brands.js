@@ -1,7 +1,5 @@
-// Each company's card is painted like its own Wallet pass: a soft white glow in the
-// top-left corner flowing into the brand's main colour. Text is white or near-black,
-// whichever reads better on that colour (Apple Wallet lets each pass choose too).
-// Unknown companies keep Kanish's original blue Deq gradient.
+// Each company's card is painted from its brand colour, the way Apple Music paints
+// Now Playing from the album art. Unknown companies keep the original Deq blue.
 
 const BRANDS = {
   // employers
@@ -90,64 +88,59 @@ export function brandColour(company = '') {
   return first ? BRANDS[first] : null
 }
 
-// --- colour maths for picking legible text --------------------------------------
-
 function toRgb(hex) {
   const value = parseInt(hex.slice(1), 16)
   return [(value >> 16) & 255, (value >> 8) & 255, value & 255]
 }
 
-function luminance([r, g, b]) {
-  const channel = c => {
-    const s = c / 255
-    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
-  }
-  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+// --- Apple Music style mesh -----------------------------------------------------
+// Like Now Playing: four soft colours taken from the brand colour (a light tint, two
+// neighbouring hues and a deep shade) floating over a dark base. The card blurs this
+// layer, so it reads as one glowing surface. White text always reads on it.
+
+const DEQ_BLUE = '#2C69B1' // companies we don't know keep Kanish's original Deq blue
+
+function toHsl(hex) {
+  const [r, g, b] = toRgb(hex).map(channel => channel / 255)
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  const l = (max + min) / 2
+  if (max === min) return [0, 0, l * 100]
+  const d = max - min
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+  let h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4
+  return [h * 60, s * 100, l * 100]
 }
 
-function contrast(a, b) {
-  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x)
-  return (light + 0.05) / (dark + 0.05)
-}
+const hsl = (h, s, l) => `hsl(${Math.round((h + 360) % 360)} ${Math.round(Math.min(s, 100))}% ${Math.round(Math.max(4, Math.min(l, 90)))}%)`
 
-function mix(a, b, amount) {
-  return a.map((channel, i) => Math.round(channel + (b[i] - channel) * amount))
-}
-
-function shade(rgb, amount) {
-  return amount >= 0 ? mix(rgb, [255, 255, 255], amount) : mix(rgb, [0, 0, 0], -amount)
-}
-
-const css = ([r, g, b], alpha = 1) => `rgba(${r}, ${g}, ${b}, ${alpha})`
-
-const WHITE = [255, 255, 255]
-const INK = [29, 29, 31] // Apple's near-black
-
-// Returns the CSS for a brand card, or null to use the default Deq gradient.
-export function brandStyle(company) {
-  const hex = brandColour(company)
-  if (!hex) return null
-  const base = toRgb(hex)
-
-  // White text whenever the brand colour allows it (most passes in Wallet use white);
-  // near-black only for light brands like Amazon orange or Nvidia green.
-  const ink = contrast(WHITE, base) >= 4.5 ? WHITE : INK
-  const top = ink === WHITE ? base : shade(base, 0.12)
-  const bottom = shade(base, -0.2)
-
-  // The brightest white glow that still keeps text at 4.5:1 where the glow is strongest.
-  let glow = 0.55
-  while (glow > 0 && contrast(ink, mix(top, WHITE, glow * 0.6)) < 4.5) glow -= 0.05
-  glow = Math.max(0, Math.round(glow * 100) / 100)
-
+export function meshColours(company) {
+  const [h, s, l] = toHsl(brandColour(company) ?? DEQ_BLUE)
   return {
-    '--card-background': [
-      `radial-gradient(90% 58% at 18% 0%, ${css(WHITE, glow)} 0%, ${css(WHITE, 0)} 100%)`,
-      `linear-gradient(170deg, ${css(top)} 0%, ${css(base)} 50%, ${css(bottom)} 100%)`,
-    ].join(', '),
-    '--card-ink': css(ink),
-    '--card-ink-soft': css(ink, 0.25),
-    '--card-on-ink': ink === WHITE ? '#1d1d1f' : '#ffffff',
-    '--card-text-shadow': ink === WHITE ? '0 0.5px 1px rgba(0, 0, 0, 0.12)' : 'none',
+    light: hsl(h + 12, s * 0.95, l + 24),
+    alt: hsl(h - 28, s * 0.9, l + 4),
+    deep: hsl(h + 6, s * 0.85, l * 0.42),
+    accent: hsl(h + 38, s * 0.75, l * 0.85),
+    base: hsl(h, s * 0.7, l * 0.32),
+  }
+}
+
+// Returns the CSS variables for a card (and for the page glow and zoom view behind it).
+export function brandStyle(company) {
+  const { light, alt, deep, accent, base } = meshColours(company)
+  const mesh = [
+    `radial-gradient(45% 40% at 22% 18%, ${light}, transparent 70%)`,
+    `radial-gradient(55% 45% at 88% 28%, ${alt}, transparent 72%)`,
+    `radial-gradient(60% 50% at 25% 85%, ${deep}, transparent 72%)`,
+    `radial-gradient(50% 45% at 85% 88%, ${accent}, transparent 70%)`,
+    base,
+  ].join(', ')
+  return {
+    '--card-background': mesh,
+    '--card-base': base,
+    '--card-ink': '#ffffff',
+    '--card-ink-soft': 'rgba(255, 255, 255, 0.66)',
+    '--card-on-ink': '#1d1d1f',
+    '--card-text-shadow': 'none',
   }
 }

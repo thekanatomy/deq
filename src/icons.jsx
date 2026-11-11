@@ -57,3 +57,13 @@ export const ShareIcon = props => (
     <path d="M8.5 10.5H7a2 2 0 0 0-2 2V18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5.5a2 2 0 0 0-2-2h-1.5" />
   </Icon>
 )
+
+// four rounded tiles, like SF Symbols' square.grid.2x2: categories
+export const CategoriesIcon = props => (
+  <Icon {...props}>
+    <rect x="4.5" y="4.5" width="6" height="6" rx="1.6" />
+    <rect x="13.5" y="4.5" width="6" height="6" rx="1.6" />
+    <rect x="4.5" y="13.5" width="6" height="6" rx="1.6" />
+    <rect x="13.5" y="13.5" width="6" height="6" rx="1.6" />
+  </Icon>
+)

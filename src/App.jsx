@@ -8,9 +8,13 @@ import DeqCard from './DeqCard'
 import DetailsSheet from './DetailsSheet'
 import { CloseIcon, MenuIcon, MoreIcon, PlusIcon } from './icons.jsx'
 import MenuSheet from './MenuSheet.jsx'
+import SaveSheet from './SaveSheet'
+import Welcome from './Welcome'
 import ZoomView from './ZoomView.jsx'
 import { brandStyle } from './brands'
-import { db } from './db'
+import { db, visible } from './db'
+import { withShortText } from './text'
+import { accountsEnabled, removeCard, useAccount } from './sync'
 
 // The scanner pulls in the QR decoder, so it only loads when + is tapped.
 const Scanner = lazy(() => import('./Scanner'))
@@ -20,7 +24,10 @@ const Scanner = lazy(() => import('./Scanner'))
 const STRIP = 0.388
 const RATIO = 7 / 5
 const PEEK = 8 // px each card shows in the bottom pile while one is open
-const SPRING = { type: 'spring', bounce: 0, duration: 0.45 }
+// Apple's motion: springs that start from wherever things are and settle without a
+// wobble. A touch of bounce only where a card is thrown into place.
+const SPRING = { type: 'spring', bounce: 0.12, duration: 0.55 }
+const SETTLE = { type: 'spring', bounce: 0, duration: 0.5 }
 
 // Width of the deck and its distance from the top of the page.
 function useDeckBox(ref) {
@@ -39,7 +46,10 @@ function useDeckBox(ref) {
 
 export default function App() {
   // Newest contact first; the person you've gone longest without is the fully visible card.
-  const people = useLiveQuery(() => db.cards.orderBy('lastContacted').reverse().toArray())
+  const people = useLiveQuery(() => db.cards.orderBy('lastContacted').reverse().filter(visible).toArray())
+  const account = useAccount()
+  const [askToSave, setAskToSave] = useState(false)
+  const pendingSave = useRef(false)
   // deck · scan (camera) · verify (check what the scan found) · form (type it in) · edit
   const [view, setView] = useState('deck')
   const [draft, setDraft] = useState({})
@@ -68,6 +78,7 @@ export default function App() {
   const cardHeight = width * RATIO
   const strip = width * STRIP
   const list = people ?? []
+  const empty = people?.length === 0
   const openIndex = list.findIndex(person => person.id === openId)
   const isOpen = openIndex >= 0
 
@@ -103,7 +114,7 @@ export default function App() {
   }
 
   async function removeOpen() {
-    await db.cards.delete(openId)
+    await removeCard(openId)
     closeCard()
   }
 
@@ -122,7 +133,7 @@ export default function App() {
       linkedin: '',
       email: '',
       place: '',
-      ...fields,
+      ...withShortText(fields),
       metAt: now,
       lastContacted: now,
     })
@@ -130,11 +141,14 @@ export default function App() {
     setOpenId(null)
     setAddedId(id)
     setView('deck')
+    // At 5 people, ask once to sign in so they're backed up (again 10 people later if you said not now).
+    const count = await db.cards.filter(visible).count()
+    if (accountsEnabled && !account.user && count >= nextSaveAsk()) pendingSave.current = true
   }
 
   async function saveEdit(fields) {
     const { name, role, company, place, linkedin, email, note } = fields
-    await db.cards.update(openId, { name, role, company, place, linkedin, email, note })
+    await db.cards.update(openId, withShortText({ name, role, company, place, linkedin, email, note }))
     setDraft({})
     setView('deck')
   }
@@ -143,6 +157,10 @@ export default function App() {
     const id = addedId
     setAddedId(null)
     if (id) openCard(id)
+    if (pendingSave.current) {
+      pendingSave.current = false
+      setTimeout(() => setAskToSave('save'), 700)
+    }
   }
 
   async function shareOpen() {
@@ -189,12 +207,12 @@ export default function App() {
                 </motion.button>
               ) : (
                 <motion.span key="logo" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <Logo />
+                  {!empty && <Logo />}
                 </motion.span>
               )}
             </AnimatePresence>
             <AnimatePresence mode="popLayout" initial={false}>
-              {isOpen ? (
+              {isOpen || empty ? (
                 <span key="spacer" aria-hidden="true" />
               ) : (
                 <motion.button
@@ -238,8 +256,16 @@ export default function App() {
               )}
             </AnimatePresence>
           </div>
-          <h1>{owner ? `${owner}’s deq` : 'My deq'}</h1>
-          {list.length > 0 && <Summary people={list} />}
+          {/* Wallet: an opened card goes straight to the top, so the title folds away */}
+          <motion.div
+            className="top-title"
+            initial={false}
+            animate={isOpen ? { height: 0, opacity: 0, filter: 'blur(8px)' } : { height: 'auto', opacity: 1, filter: 'blur(0px)' }}
+            transition={SETTLE}
+          >
+            <h1 className={empty ? 'wordmark' : undefined}>{empty ? 'deq' : owner ? `${owner}’s deq` : 'My deq'}</h1>
+            {list.length > 0 && <Summary people={list} />}
+          </motion.div>
         </header>
 
         <section className="deck" ref={deckRef} style={{ height: deckHeight }}>
@@ -253,7 +279,7 @@ export default function App() {
                 style={{ width, zIndex: selected ? 100 : index }}
                 initial={loaded ? { y: y + 160, opacity: 0 } : false}
                 animate={{ y, opacity: 1 }}
-                transition={SPRING}
+                transition={{ ...SPRING, opacity: SETTLE }}
                 drag={selected ? 'y' : false}
                 dragConstraints={{ top: 0, bottom: 0 }}
                 dragElastic={0.4}
@@ -283,8 +309,18 @@ export default function App() {
                 {selected && zoomed ? (
                   <div className="card-placeholder" />
                 ) : (
-                  <motion.div layoutId={`card-${person.id}`} transition={SPRING}>
-                    <DeqCard person={person} interactive={selected} />
+                  <motion.div
+                    layoutId={`card-${person.id}`}
+                    transition={{ ...SPRING, filter: { duration: 0.42, ease: [0.32, 0.72, 0, 1] } }}
+                    // the short Apple blur as a card lifts out of the stack
+                    animate={selected ? { filter: ['blur(0px)', 'blur(5px)', 'blur(0px)'] } : { filter: 'blur(0px)' }}
+                    style={{ willChange: 'transform' }}
+                  >
+                    <DeqCard
+                      person={person}
+                      interactive={selected}
+                      open={selected || (!isOpen && index === list.length - 1)}
+                    />
                   </motion.div>
                 )}
               </motion.div>
@@ -292,12 +328,11 @@ export default function App() {
           })}
         </section>
 
-        {people?.length === 0 && (
-          <div className="empty">
-            <div className="empty-card" />
-            <p>Scan someone's LinkedIn QR or business card to start your deq.</p>
-            <button className="pill-button dark" onClick={() => setView('scan')}>Add Someone</button>
-          </div>
+        {empty && (
+          <Welcome
+            onAdd={() => setView('scan')}
+            onSignIn={accountsEnabled && !account.user ? () => setAskToSave('signin') : null}
+          />
         )}
       </div>
 
@@ -361,6 +396,17 @@ export default function App() {
           />
         )}
         {zoomed && open && <ZoomView key="zoom" person={open} onClose={() => setZoomed(false)} />}
+        {askToSave && !account.user && (
+          <SaveSheet
+            key="save"
+            mode={askToSave}
+            count={list.length}
+            onClose={() => {
+              if (askToSave === 'save') laterSaveAsk(list.length)
+              setAskToSave(false)
+            }}
+          />
+        )}
       </AnimatePresence>
       </LayoutGroup>
     </MotionConfig>
@@ -392,6 +438,23 @@ function Summary({ people }) {
       )}
     </p>
   )
+}
+
+// When to ask to sign in: at 5 people, then 10 more after each "Not now".
+function nextSaveAsk() {
+  try {
+    return Number(localStorage.getItem('deq-save-ask-at')) || 5
+  } catch {
+    return 5
+  }
+}
+
+function laterSaveAsk(count) {
+  try {
+    localStorage.setItem('deq-save-ask-at', String(count + 10))
+  } catch {
+    // private browsing: it asks again next time
+  }
 }
 
 // Until there's an account, the title uses the name you set in the menu (or "My deq").
@@ -428,3 +491,6 @@ function Logo() {
     </svg>
   )
 }
+
+
+
