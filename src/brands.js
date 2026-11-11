@@ -144,3 +144,67 @@ export function brandStyle(company) {
     '--card-text-shadow': 'none',
   }
 }
+
+// --- the same mesh, painted once into an image ------------------------------------
+// Live CSS blur on every card makes phones redraw it on every animation frame, which
+// is what made moving cards stutter. Instead each brand's mesh is painted once, small,
+// into a canvas: scaled up, a small image is naturally soft, so no blur is needed.
+const meshCache = new Map()
+const MESH_W = 30
+const MESH_H = 42
+
+function paintMesh(company) {
+  const { light, alt, deep, accent, base } = meshColours(company)
+  const canvas = document.createElement('canvas')
+  canvas.width = MESH_W
+  canvas.height = MESH_H
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = base
+  ctx.fillRect(0, 0, MESH_W, MESH_H)
+  // [colour, centre x, centre y, radius x, radius y] as fractions of the card
+  const blobs = [
+    [deep, 0.25, 0.85, 0.6, 0.5],
+    [accent, 0.85, 0.88, 0.5, 0.45],
+    [alt, 0.88, 0.28, 0.55, 0.45],
+    [light, 0.22, 0.18, 0.45, 0.4],
+  ]
+  for (const [colour, x, y, rx, ry] of blobs) {
+    ctx.save()
+    ctx.translate(x * MESH_W, y * MESH_H)
+    ctx.scale(rx * MESH_W, ry * MESH_H)
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 1)
+    gradient.addColorStop(0, colour)
+    gradient.addColorStop(0.45, colour.replace(')', ' / 0.55)'))
+    gradient.addColorStop(1, colour.replace(')', ' / 0)'))
+    ctx.fillStyle = gradient
+    ctx.fillRect(-1, -1, 2, 2)
+    ctx.restore()
+  }
+  return canvas.toDataURL('image/png')
+}
+
+export function meshImage(company) {
+  const key = brandColour(company) ?? DEQ_BLUE
+  if (!meshCache.has(key)) meshCache.set(key, `url(${paintMesh(company)})`)
+  return meshCache.get(key)
+}
+
+// A tile of fine grain, made once and shared by every card (no blend modes needed).
+let grain = null
+export function grainImage() {
+  if (grain) return grain
+  const size = 96
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')
+  const pixels = ctx.createImageData(size, size)
+  for (let i = 0; i < pixels.data.length; i += 4) {
+    const light = Math.random() > 0.5 ? 255 : 0
+    pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = light
+    pixels.data[i + 3] = Math.random() * 12
+  }
+  ctx.putImageData(pixels, 0, 0)
+  grain = `url(${canvas.toDataURL('image/png')})`
+  return grain
+}

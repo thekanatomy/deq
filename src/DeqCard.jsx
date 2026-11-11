@@ -1,7 +1,7 @@
 import { getSvgPath } from 'figma-squircle'
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { brandStyle } from './brands'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { brandStyle, grainImage, meshImage } from './brands'
 import { db } from './db'
 import { PlusIcon } from './icons'
 import { shrinkPhoto } from './photo'
@@ -9,7 +9,7 @@ import { companyOf, roleOf } from './text'
 
 const DAY = 24 * 60 * 60 * 1000
 const CHANNELS = ['In person', 'LinkedIn', 'Mail', 'Text']
-const FADE = { type: 'spring', bounce: 0, duration: 0.4 }
+const FADE = { type: 'spring', bounce: 0, duration: 0.35 }
 
 // Apple's continuous corners: the curve eases into the straight edge instead of
 // bending suddenly. 0.6 smoothing is what iOS uses. Drawn as a clip path, because
@@ -50,7 +50,11 @@ function useSquircle(ref) {
       const width = element.offsetWidth
       const height = element.offsetHeight
       if (!width || !height) return
-      setPath({ width, height, d: getSvgPath({ width, height, cornerRadius: width * CORNER, cornerSmoothing: SMOOTHING }) })
+      setPath(previous =>
+        previous?.width === width && previous?.height === height
+          ? previous
+          : { width, height, d: getSvgPath({ width, height, cornerRadius: width * CORNER, cornerSmoothing: SMOOTHING }) },
+      )
     }
     draw()
     const observer = new ResizeObserver(draw)
@@ -61,7 +65,7 @@ function useSquircle(ref) {
 }
 
 // open: the full card (layout A). Closed: the strip you see in the stack.
-export default function DeqCard({ person, interactive = true, open = true }) {
+function DeqCard({ person, interactive = true, open = true }) {
   const [updating, setUpdating] = useState(false)
   const [editing, setEditing] = useState(false)
   const [contact, setContact] = useState({ linkedin: person.linkedin ?? '', email: person.email ?? '' })
@@ -102,14 +106,18 @@ export default function DeqCard({ person, interactive = true, open = true }) {
 
   return (
     <div className="xcard-frame">
+    {/* the shadow is its own layer, so moving the card never re-draws it */}
+    <div className="xcard-shadow" aria-hidden="true" />
     <article
       ref={cardRef}
       className="xcard"
-      style={{ ...brandStyle(person.company), clipPath: shape ? `path('${shape.d}')` : undefined }}
+      style={{
+        ...brandStyle(person.company),
+        backgroundImage: `${grainImage()}, ${meshImage(person.company)}`,
+        clipPath: shape ? `path('${shape.d}')` : undefined,
+      }}
       inert={!interactive}
     >
-      <div className="xcard-mesh" aria-hidden="true" />
-      <div className="xcard-grain" aria-hidden="true" />
 
       <AnimatePresence initial={false} mode="popLayout">
         {open ? (
@@ -117,9 +125,9 @@ export default function DeqCard({ person, interactive = true, open = true }) {
           <motion.div
             key="open"
             className="xcard-body open"
-            initial={{ opacity: 0, filter: 'blur(4px)' }}
-            animate={{ opacity: 1, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, filter: 'blur(4px)' }}
+            initial={{ opacity: 0, scale: 0.985 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
             transition={FADE}
           >
             <header className="xcard-top">
@@ -226,3 +234,6 @@ export default function DeqCard({ person, interactive = true, open = true }) {
     </div>
   )
 }
+
+// Only cards whose person or state changed re-render when you open one, not the whole deck.
+export default memo(DeqCard)

@@ -6,12 +6,14 @@ import AddFlow from './AddFlow'
 import CardForm from './CardForm.jsx'
 import DeqCard from './DeqCard'
 import DetailsSheet from './DetailsSheet'
-import { CloseIcon, MenuIcon, MoreIcon, PlusIcon } from './icons.jsx'
+import { CategoriesIcon, CloseIcon, MoreIcon, PlusIcon } from './icons.jsx'
 import MenuSheet from './MenuSheet.jsx'
+import CategoriesSheet from './CategoriesSheet'
+import { filtersFor } from './filters'
 import SaveSheet from './SaveSheet'
 import Welcome from './Welcome'
 import ZoomView from './ZoomView.jsx'
-import { brandStyle } from './brands'
+import { meshImage } from './brands'
 import { db, visible } from './db'
 import { withShortText } from './text'
 import { accountsEnabled, removeCard, useAccount } from './sync'
@@ -28,20 +30,46 @@ const PEEK = 8 // px each card shows in the bottom pile while one is open
 // wobble. A touch of bounce only where a card is thrown into place.
 const SPRING = { type: 'spring', bounce: 0.12, duration: 0.55 }
 const SETTLE = { type: 'spring', bounce: 0, duration: 0.5 }
+// buttons that swap in the top bar
+const POP = {
+  initial: { opacity: 0, scale: 0.9 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.9 },
+  transition: { type: 'spring', bounce: 0, duration: 0.3 },
+}
 
 // Width of the deck and its distance from the top of the page.
 function useDeckBox(ref) {
   const [box, setBox] = useState({ width: 0, top: 0 })
   useLayoutEffect(() => {
     const measure = () => {
-      const rect = ref.current.getBoundingClientRect()
-      setBox({ width: rect.width, top: rect.top + window.scrollY })
+      // offsetTop ignores transforms, so the deck sliding up doesn't change its measured spot
+      let top = 0
+      for (let node = ref.current; node; node = node.offsetParent) top += node.offsetTop
+      const width = ref.current.offsetWidth
+      // only re-render when something we use actually changed (the deck's height changes
+      // when a card opens, but its width and position don't)
+      setBox(previous => (previous.width === width && previous.top === top ? previous : { width, top }))
     }
     const observer = new ResizeObserver(measure)
     observer.observe(ref.current)
     return () => observer.disconnect()
   }, [ref])
   return box
+}
+
+// Height of an element, kept up to date (the title block, which the deck slides over).
+function useHeight(ref) {
+  const [height, setHeight] = useState(0)
+  useLayoutEffect(() => {
+    const observer = new ResizeObserver(() => {
+      const next = ref.current?.offsetHeight ?? 0
+      setHeight(previous => (previous === next ? previous : next))
+    })
+    observer.observe(ref.current)
+    return () => observer.disconnect()
+  }, [ref])
+  return height
 }
 
 export default function App() {
@@ -62,6 +90,8 @@ export default function App() {
 
   const deckRef = useRef(null)
   const { width, top: deckTop } = useDeckBox(deckRef)
+  const titleRef = useRef(null)
+  const titleHeight = useHeight(titleRef)
   // Cards already there when the app opens appear in place; cards added later slide in.
   const [loaded, setLoaded] = useState(false)
   useEffect(() => {
@@ -77,14 +107,21 @@ export default function App() {
 
   const cardHeight = width * RATIO
   const strip = width * STRIP
-  const list = people ?? []
+  const everyone = people ?? []
   const empty = people?.length === 0
+  // categories: everyone, who's gone quiet, met this month, or one company
+  const [filterId, setFilterId] = useState('all')
+  const [categoriesOpen, setCategoriesOpen] = useState(false)
+  const filters = filtersFor(everyone)
+  const filter = filters.find(option => option.id === filterId) ?? filters[0]
+  const list = filter.id === 'all' ? everyone : everyone.filter(filter.test)
   const openIndex = list.findIndex(person => person.id === openId)
   const isOpen = openIndex >= 0
 
   // Where each card sits. Closed: a Wallet stack. Open: the chosen card at the top,
   // everyone else tucked into a thin pile at the bottom of the screen.
-  const pileTop = Math.max(cardHeight + 24, viewport - deckTop - 40 - PEEK * Math.min(list.length - 1, 4))
+  const lift = isOpen ? titleHeight : 0
+  const pileTop = Math.max(cardHeight + 24, viewport - (deckTop - lift) - 40 - PEEK * Math.min(list.length - 1, 4))
   function positionOf(index) {
     if (!isOpen) return index * strip
     if (index === openIndex) return 0
@@ -97,10 +134,10 @@ export default function App() {
       ? pileTop + PEEK * Math.min(list.length - 1, 4) + strip * 0.5
       : (list.length - 1) * strip + cardHeight
 
-  const recentPlaces = [...new Set(list.map(person => person.place).filter(Boolean))].slice(0, 4)
+  const recentPlaces = [...new Set(everyone.map(person => person.place).filter(Boolean))].slice(0, 4)
   const open = isOpen ? list[openIndex] : null
   const added = list.find(person => person.id === addedId)
-  const openLook = open ? brandStyle(open.company) ?? { '--card-background': 'var(--deq-gradient)' } : null
+  const openLook = open ? { backgroundImage: meshImage(open.company) } : null
 
   function openCard(id) {
     setOpenId(id)
@@ -191,6 +228,8 @@ export default function App() {
       </AnimatePresence>
       <div className="page">
         <header className="top">
+          {/* Wallet's top bar: the title on the left, + and a [categories | ⋯] pill on the right.
+              With a card open: ✕ on the left, ⋯ (this card's options) on the right. */}
           <div className="top-bar">
             <AnimatePresence mode="popLayout" initial={false}>
               {isOpen ? (
@@ -199,33 +238,14 @@ export default function App() {
                   className="glass-button"
                   aria-label="Close card"
                   onClick={closeCard}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
+                  {...POP}
                 >
                   <CloseIcon />
                 </motion.button>
               ) : (
-                <motion.span key="logo" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  {!empty && <Logo />}
-                </motion.span>
-              )}
-            </AnimatePresence>
-            <AnimatePresence mode="popLayout" initial={false}>
-              {isOpen || empty ? (
-                <span key="spacer" aria-hidden="true" />
-              ) : (
-                <motion.button
-                  key="add"
-                  className="glass-button"
-                  aria-label="Add a person"
-                  onClick={() => setView('scan')}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                >
-                  <PlusIcon />
-                </motion.button>
+                <motion.h1 key="title" className="top-name" {...POP}>
+                  {empty ? '' : filter.label ?? (owner ? `${owner}’s deq` : 'My deq')}
+                </motion.h1>
               )}
             </AnimatePresence>
             <AnimatePresence mode="popLayout" initial={false}>
@@ -235,40 +255,64 @@ export default function App() {
                   className="glass-button"
                   aria-label="More options"
                   onClick={() => setDetailsOpen(true)}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
+                  {...POP}
                 >
                   <MoreIcon />
                 </motion.button>
               ) : (
-                <motion.button
-                  key="menu"
-                  className="glass-button"
-                  aria-label="Menu"
-                  onClick={() => setMenuOpen(true)}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                >
-                  <MenuIcon />
-                </motion.button>
+                <motion.div key="actions" className="top-actions" {...POP}>
+                  {!empty && (
+                    <button className="glass-button" aria-label="Add a person" onClick={() => setView('scan')}>
+                      <PlusIcon />
+                    </button>
+                  )}
+                  <div className="glass-pair">
+                    {!empty && (
+                      <button
+                        className={filter.id === 'all' ? '' : 'active'}
+                        aria-label="Categories"
+                        onClick={() => setCategoriesOpen(true)}
+                      >
+                        <CategoriesIcon />
+                      </button>
+                    )}
+                    <button aria-label="Menu" onClick={() => setMenuOpen(true)}>
+                      <MoreIcon />
+                    </button>
+                  </div>
+                </motion.div>
               )}
             </AnimatePresence>
           </div>
-          {/* Wallet: an opened card goes straight to the top, so the title folds away */}
+          {/* Wallet: an opened card goes straight to the top, so the summary folds away */}
           <motion.div
+            ref={titleRef}
             className="top-title"
             initial={false}
-            animate={isOpen ? { height: 0, opacity: 0, filter: 'blur(8px)' } : { height: 'auto', opacity: 1, filter: 'blur(0px)' }}
+            animate={isOpen ? { opacity: 0, scale: 0.96, filter: 'blur(6px)' } : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
             transition={SETTLE}
+            style={{ transformOrigin: 'top left' }}
           >
-            <h1 className={empty ? 'wordmark' : undefined}>{empty ? 'deq' : owner ? `${owner}’s deq` : 'My deq'}</h1>
-            {list.length > 0 && <Summary people={list} />}
+            {empty && <h1 className="wordmark">deq</h1>}
+            {list.length > 0 && filter.id === 'all' && <Summary people={list} />}
+            {filter.id !== 'all' && (
+              <button className="filter-chip" onClick={() => setFilterId('all')}>
+                {plural(list.length, 'person')} · Show everyone
+              </button>
+            )}
           </motion.div>
         </header>
 
-        <section className="deck" ref={deckRef} style={{ height: deckHeight }}>
+        <motion.section
+          className="deck"
+          ref={deckRef}
+          style={{ height: deckHeight }}
+          initial={false}
+          // Wallet: the deck slides up over the folded title, so the open card sits at the top.
+          // Only a transform moves, so nothing on the page has to be laid out again.
+          animate={{ y: -lift }}
+          transition={SPRING}
+        >
           {width > 0 && list.map((person, index) => {
             const y = positionOf(index)
             const selected = index === openIndex
@@ -309,13 +353,10 @@ export default function App() {
                 {selected && zoomed ? (
                   <div className="card-placeholder" />
                 ) : (
-                  <motion.div
-                    layoutId={`card-${person.id}`}
-                    transition={{ ...SPRING, filter: { duration: 0.42, ease: [0.32, 0.72, 0, 1] } }}
-                    // the short Apple blur as a card lifts out of the stack
-                    animate={selected ? { filter: ['blur(0px)', 'blur(5px)', 'blur(0px)'] } : { filter: 'blur(0px)' }}
-                    style={{ willChange: 'transform' }}
-                  >
+                  // Only the open card needs a shared-layout id (for flying into the zoom view).
+                  // Giving every card one made the animation library re-measure the whole deck on
+                  // every frame, which is what made opening a card stutter.
+                  <motion.div layoutId={selected ? `card-${person.id}` : undefined} transition={SPRING}>
                     <DeqCard
                       person={person}
                       interactive={selected}
@@ -326,7 +367,7 @@ export default function App() {
               </motion.div>
             )
           })}
-        </section>
+        </motion.section>
 
         {empty && (
           <Welcome
@@ -387,7 +428,7 @@ export default function App() {
           <MenuSheet
             key="menu"
             owner={owner}
-            count={list.length}
+            count={everyone.length}
             onOwner={name => {
               setOwner(name)
               saveOwner(name)
@@ -395,14 +436,28 @@ export default function App() {
             onClose={() => setMenuOpen(false)}
           />
         )}
+        {categoriesOpen && (
+          <CategoriesSheet
+            key="categories"
+            filters={filters}
+            current={filter.id}
+            onPick={id => {
+              setFilterId(id)
+              setCategoriesOpen(false)
+              closeCard()
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }}
+            onClose={() => setCategoriesOpen(false)}
+          />
+        )}
         {zoomed && open && <ZoomView key="zoom" person={open} onClose={() => setZoomed(false)} />}
         {askToSave && !account.user && (
           <SaveSheet
             key="save"
             mode={askToSave}
-            count={list.length}
+            count={everyone.length}
             onClose={() => {
-              if (askToSave === 'save') laterSaveAsk(list.length)
+              if (askToSave === 'save') laterSaveAsk(everyone.length)
               setAskToSave(false)
             }}
           />
@@ -475,22 +530,7 @@ function saveOwner(name) {
   }
 }
 
-// Placeholder mark: swap in the real Deq logo SVG here.
-function Logo() {
-  return (
-    <svg className="logo" viewBox="0 0 40 40" aria-label="Deq">
-      <path
-        d="M7 11h11a12 12 0 0 1 0 24H7V11Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="4.5"
-        strokeLinejoin="round"
-      />
-      <circle cx="22" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="4.5" />
-      <path d="M29 11h8" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round" />
-    </svg>
-  )
+
+function plural(count, word) {
+  return `${count} ${count === 1 ? word : word === 'person' ? 'people' : word + 's'}`
 }
-
-
-

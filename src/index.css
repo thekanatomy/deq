@@ -59,7 +59,7 @@ html {
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: var(--page, var(--bg));
 }
 
 button,
@@ -177,7 +177,7 @@ button {
 .deck {
   position: relative;
   margin-top: 2.5rem;
-  transition: height 450ms var(--ease-out);
+  /* no height transition: animating the height re-rendered every card on every frame */
 }
 
 .slot {
@@ -246,7 +246,15 @@ button {
    Its outline is Apple's continuous corner (a clip path set by DeqCard), so the shadow
    lives on the frame around it, where it follows that exact shape. */
 .xcard-frame {
-  filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.16)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+  position: relative;
+}
+
+.xcard-shadow {
+  position: absolute;
+  inset: 0;
+  border-radius: 8.5%/6%;
+  box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.08);
+  pointer-events: none;
 }
 
 .xcard {
@@ -255,31 +263,15 @@ button {
   width: 100%;
   aspect-ratio: 5 / 7;
   box-sizing: border-box;
-  border-radius: 8.5cqw; /* until the squircle path is measured */
+  /* % of the card's own width and height (cqw here would measure the window, not the
+     card, which turned cards into eggs on wide screens). The squircle path replaces it. */
+  border-radius: 8.5% / 6.07%;
   overflow: hidden;
   isolation: isolate;
   color: var(--card-ink, #fff);
-  background: var(--card-base, #0d2238);
-}
-
-/* Apple Music: the colours are blurred into one glowing surface */
-.xcard-mesh {
-  position: absolute;
-  inset: -25%;
-  z-index: -2;
-  background: var(--card-background);
-  filter: blur(9cqw) saturate(1.15);
-}
-
-/* a whisper of film grain, so the gradient feels printed rather than digital */
-.xcard-grain {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  opacity: 0.16;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  pointer-events: none;
+  background-color: var(--card-base, #0d2238);
+  background-size: 96px 96px, 100% 100%; /* grain tile, then the mesh image */
+  background-repeat: repeat, no-repeat;
 }
 
 /* hairline light catching the edge of the card */
@@ -495,9 +487,7 @@ button {
   padding: 0 4cqw;
   border: 0;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.2);
   color: #fff;
   text-decoration: none;
   cursor: pointer;
@@ -1290,17 +1280,19 @@ button {
 /* behind an open card the page takes on the card's colour, like an artist page */
 .page-tint {
   position: fixed;
-  inset: -10%;
+  inset: 0;
   z-index: -1;
-  background: var(--card-background);
-  filter: blur(80px) saturate(1.2);
+  /* the card's own pre-painted gradient, stretched: already soft, so no live blur
+     (a full-screen blur(80px) here was the last thing making cards stutter) */
+  background-size: 100% 100%;
+  will-change: opacity;
 }
 
 .page-tint::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, transparent 0%, var(--bg) 85%);
+  background: linear-gradient(to bottom, transparent 0%, var(--page, var(--bg)) 85%);
 }
 
 body {
@@ -1891,8 +1883,7 @@ body {
   top: 0;
   width: 58%;
   margin-left: -29%;
-  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.14));
-  pointer-events: none;
+  pointer-events: none; /* each card brings its own shadow layer */
 }
 
 .welcome-card:nth-child(3) {
@@ -1906,7 +1897,7 @@ body {
   justify-items: start;
   gap: 1rem;
   padding-top: 1.5rem;
-  background: linear-gradient(to bottom, transparent, var(--bg) 1.5rem);
+  background: linear-gradient(to bottom, transparent, var(--page, var(--bg)) 1.5rem);
 }
 
 .welcome-title {
@@ -1985,7 +1976,11 @@ h1.wordmark {
 
 /* the title and summary fold away when a card opens (Wallet) */
 .top-title {
-  overflow: hidden;
+  will-change: transform, opacity;
+}
+
+.slot {
+  will-change: transform;
 }
 
 /* ---------- long text never breaks a card ---------- */
@@ -2026,4 +2021,154 @@ h1.wordmark {
 
 .xcard-hero.long {
   font-size: 10.5cqw;
+}
+
+/* ---------- Wallet top bar: title left, + and [categories | ⋯] right ---------- */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  height: 3rem;
+}
+
+.top-bar > :last-child {
+  justify-self: auto;
+}
+
+.top .top-name {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 2.125rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex: none;
+}
+
+.top-bar .glass-button {
+  width: 44px;
+  height: 44px;
+}
+
+/* two buttons sharing one glass pill, like Wallet's [orders | ⋯] */
+.glass-pair {
+  display: flex;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--glass);
+}
+
+.glass-pair button {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--label);
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+.glass-pair button:active {
+  transform: scale(0.92);
+}
+
+.glass-pair button.active {
+  color: var(--tint);
+}
+
+.top-title .summary {
+  margin-top: 1rem;
+}
+
+.filter-chip {
+  margin-top: 1rem;
+  padding: 0.5rem 0.875rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--glass);
+  color: var(--tint);
+  font-size: var(--size-callout);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+/* categories sheet */
+.categories-sheet {
+  max-height: 80dvh;
+  overflow-y: auto;
+  touch-action: pan-y;
+}
+
+.category-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1.25rem;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--label);
+}
+
+.category-row small {
+  display: block;
+  color: var(--label-secondary);
+  font-size: var(--size-caption);
+  font-weight: var(--weight-text);
+}
+
+.category-count {
+  color: var(--label-secondary);
+  font-weight: var(--weight-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.category-tick {
+  color: var(--tint);
+  font-weight: 700;
+}
+
+.group-label {
+  margin: 1.25rem 0 0.5rem 1rem;
+  color: var(--label-secondary);
+  font-size: var(--size-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- desktop: a calm, phone-width column on a soft background ---------- */
+@media (min-width: 720px) {
+  :root {
+    --page: #f2f2f7;
+  }
+
+  .page {
+    max-width: 420px;
+    padding-top: 3.5rem;
+  }
+
+  h1.wordmark {
+    font-size: 8rem;
+  }
+
+  .welcome-title {
+    font-size: 3.75rem;
+  }
+}
+
+@media (min-width: 720px) and (prefers-color-scheme: dark) {
+  :root {
+    --page: #0b0b0d;
+  }
 }
