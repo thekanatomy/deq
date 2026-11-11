@@ -12,6 +12,10 @@ import CategoriesSheet from './CategoriesSheet'
 import { filtersFor } from './filters'
 import SaveSheet from './SaveSheet'
 import Welcome from './Welcome'
+import Intro from './Intro'
+import InAppGate from './InAppGate'
+import HomeScreenSheet from './HomeScreenSheet'
+import { inAppBrowser, isStandalone, recall, remember } from './browser'
 import ZoomView from './ZoomView.jsx'
 import { meshImage } from './brands'
 import { db, visible } from './db'
@@ -78,6 +82,31 @@ export default function App() {
   const account = useAccount()
   const [askToSave, setAskToSave] = useState(false)
   const pendingSave = useRef(false)
+  // opened inside Instagram/TikTok/LinkedIn…: ask to move to the real browser first
+  const [gateApp, setGateApp] = useState(() => (recall('deq-stay-in-app') ? null : inAppBrowser()))
+  // the six-second story, once, for someone new
+  const [introSeen, setIntroSeen] = useState(() => Boolean(recall('deq-intro-seen', true)))
+  // from the 5th person, after signing in (or "Not now"): put deq on the Home Screen
+  const [homeTip, setHomeTip] = useState(false)
+  const pendingHome = useRef(false)
+  const [installPrompt, setInstallPrompt] = useState(null)
+  // Signed in from the 5th-person sheet (or came back from Google): the Home Screen is next.
+  const signedIn = Boolean(account.user)
+  const deckSize = people?.length ?? 0
+  useEffect(() => {
+    if (!signedIn || deckSize < 5 || !wantsHomeTip() || recall('deq-home-tip-shown')) return undefined
+    remember('deq-home-tip-shown', '1') // once per visit
+    const timer = setTimeout(() => setHomeTip(true), 900)
+    return () => clearTimeout(timer)
+  }, [signedIn, deckSize])
+  useEffect(() => {
+    const keep = event => {
+      event.preventDefault() // Android: show our own button instead of the browser's banner
+      setInstallPrompt(event)
+    }
+    window.addEventListener('beforeinstallprompt', keep)
+    return () => window.removeEventListener('beforeinstallprompt', keep)
+  }, [])
   // deck · scan (camera) · verify (check what the scan found) · form (type it in) · edit
   const [view, setView] = useState('deck')
   const [draft, setDraft] = useState({})
@@ -180,7 +209,9 @@ export default function App() {
     setView('deck')
     // At 5 people, ask once to sign in so they're backed up (again 10 people later if you said not now).
     const count = await db.cards.filter(visible).count()
+    // From the 5th person: first "don't lose these people" (sign in), then the Home Screen.
     if (accountsEnabled && !account.user && count >= nextSaveAsk()) pendingSave.current = true
+    else if (count >= 5 && wantsHomeTip()) pendingHome.current = true
   }
 
   async function saveEdit(fields) {
@@ -197,6 +228,9 @@ export default function App() {
     if (pendingSave.current) {
       pendingSave.current = false
       setTimeout(() => setAskToSave('save'), 700)
+    } else if (pendingHome.current) {
+      pendingHome.current = false
+      setTimeout(() => setHomeTip(true), 700)
     }
   }
 
@@ -295,6 +329,7 @@ export default function App() {
           >
             {empty && <h1 className="wordmark">deq</h1>}
             {list.length > 0 && filter.id === 'all' && <Summary people={list} />}
+            {filter.id === 'all' && <Nudge people={list} onOpen={openCard} />}
             {filter.id !== 'all' && (
               <button className="filter-chip" onClick={() => setFilterId('all')}>
                 {plural(list.length, 'person')} · Show everyone
@@ -450,14 +485,32 @@ export default function App() {
             onClose={() => setCategoriesOpen(false)}
           />
         )}
+        {homeTip && (
+          <HomeScreenSheet
+            key="home-tip"
+            installPrompt={installPrompt}
+            onClose={() => {
+              remember('deq-home-tip', '1', true)
+              setHomeTip(false)
+            }}
+          />
+        )}
+        {empty && !introSeen && !gateApp && <Intro key="intro" onDone={() => setIntroSeen(true)} />}
+        {gateApp && <InAppGate key="gate" app={gateApp} onContinue={() => setGateApp(null)} />}
         {zoomed && open && <ZoomView key="zoom" person={open} onClose={() => setZoomed(false)} />}
         {askToSave && !account.user && (
           <SaveSheet
             key="save"
             mode={askToSave}
             count={everyone.length}
+            people={everyone}
             onClose={() => {
-              if (askToSave === 'save') laterSaveAsk(everyone.length)
+              if (askToSave === 'save') {
+                laterSaveAsk(everyone.length)
+                // "Not now" to signing in: still offer the Home Screen, so the cards
+                // at least survive on this phone
+                if (wantsHomeTip()) setTimeout(() => setHomeTip(true), 600)
+              }
               setAskToSave(false)
             }}
           />
@@ -470,29 +523,59 @@ export default function App() {
 
 const MONTH = 30 * 24 * 60 * 60 * 1000
 
-// Apple Music Replay's big sentence, for people: what happened this month, in two tones.
+// Two numbers you can read at a glance: who you met this month, who's waiting on you.
 function Summary({ people }) {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
   const metThisMonth = people.filter(person => (person.metAt ?? person.lastContacted) >= monthStart).length
-  const waiting = people.filter(person => Date.now() - person.lastContacted > MONTH).length
+  // waiting on you: their follow-up date has come, or (no follow-up set) it's been a month
+  const waiting = people.filter(person =>
+    person.followUpDays
+      ? Date.now() >= person.lastContacted + person.followUpDays * 24 * 60 * 60 * 1000
+      : Date.now() - person.lastContacted > MONTH,
+  ).length
   const monthName = now.toLocaleDateString('en-GB', { month: 'long' })
-  const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`
 
   return (
-    <p className="summary">
-      {metThisMonth > 0 ? (
-        <>You met <b>{plural(metThisMonth, 'person').replace('persons', 'people')}</b> in {monthName}. </>
-      ) : (
-        <>No one new in {monthName} yet. </>
-      )}
-      {waiting > 0 ? (
-        <><b>{waiting}</b> {waiting === 1 ? "hasn't" : "haven't"} heard from you in a month.</>
-      ) : (
-        <>You're up to date with everyone.</>
-      )}
-    </p>
+    <div className="summary">
+      <div className="stat">
+        <b>{metThisMonth}</b>
+        <span>met in {monthName}</span>
+      </div>
+      <div className={`stat${waiting > 0 ? ' due' : ''}`}>
+        <b>{waiting}</b>
+        <span>{waiting === 0 ? 'all caught up' : 'waiting on you'}</span>
+      </div>
+    </div>
   )
+}
+
+// The in-app reminder: the person whose follow-up date has come (longest overdue
+// first), with what stood out about them, so you know exactly who they are.
+const DAY = 24 * 60 * 60 * 1000
+function Nudge({ people, onOpen }) {
+  const due = people
+    .filter(person => person.followUpDays && Date.now() >= person.lastContacted + person.followUpDays * DAY)
+    .sort((a, b) => a.lastContacted + a.followUpDays * DAY - (b.lastContacted + b.followUpDays * DAY))
+  if (!due.length) return null
+  const person = due[0]
+  const first = person.name.split(' ')[0]
+  return (
+    <button className="nudge" onClick={() => onOpen(person.id)}>
+      <span className="nudge-title">
+        Say hi to {first}
+        {due.length > 1 && <span className="nudge-more"> +{due.length - 1} more</span>}
+      </span>
+      <span className="nudge-text">
+        {person.note || [person.role, person.company].filter(Boolean).join(' · ') || `Met at ${person.place || 'an event'}`}
+      </span>
+    </button>
+  )
+}
+
+// The Home Screen ask: only in a browser tab, and only until it's been answered.
+function wantsHomeTip() {
+  return !isStandalone() && !recall('deq-home-tip', true)
 }
 
 // When to ask to sign in: at 5 people, then 10 more after each "Not now".

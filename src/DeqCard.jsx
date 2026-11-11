@@ -5,6 +5,7 @@ import { brandStyle, grainImage, meshImage } from './brands'
 import { db } from './db'
 import { PlusIcon } from './icons'
 import { shrinkPhoto } from './photo'
+import { readPhoto } from './vision'
 import { companyOf, roleOf } from './text'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -21,8 +22,13 @@ function formatDate(timestamp) {
   return new Date(timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 }
 
+// Accepts whatever people type or the AI reads: a full link, "linkedin.com/in/x",
+// "www.linkedin.com/in/x/", "@x" or just "x", and always opens the real profile.
 function linkedinUrl(value) {
-  return value.startsWith('http') ? value : `https://www.linkedin.com/in/${value}`
+  const text = value.trim()
+  const path = text.match(/linkedin\.com\/((?:in|company)\/[^/?#\s]+)/i)
+  if (path) return `https://www.linkedin.com/${path[1]}`
+  return `https://www.linkedin.com/in/${text.replace(/^@/, '').replace(/^\/+|\/+$/g, '')}`
 }
 
 function initials(name = '') {
@@ -67,10 +73,14 @@ function useSquircle(ref) {
 // open: the full card (layout A). Closed: the strip you see in the stack.
 function DeqCard({ person, interactive = true, open = true }) {
   const [updating, setUpdating] = useState(false)
+  // after tapping LinkedIn/Mail: did they reach out, or just look?
+  const [asking, setAsking] = useState(null)
   const [editing, setEditing] = useState(false)
   const [contact, setContact] = useState({ linkedin: person.linkedin ?? '', email: person.email ?? '' })
   const cardRef = useRef(null)
   const cameraInput = useRef(null)
+  const contactPhoto = useRef(null)
+  const [reading, setReading] = useState(false)
   const photoUrl = usePhotoUrl(person.photo)
   const shape = useSquircle(cardRef)
 
@@ -81,6 +91,7 @@ function DeqCard({ person, interactive = true, open = true }) {
   async function logContact(channel) {
     await db.cards.update(person.id, { lastContacted: Date.now(), lastChannel: channel })
     setUpdating(false)
+    setAsking(null)
   }
 
   // Tapping the avatar opens the camera; then the contact fields open to fill in.
@@ -90,6 +101,21 @@ function DeqCard({ person, interactive = true, open = true }) {
     if (!file) return
     await db.cards.update(person.id, { photo: await shrinkPhoto(file) })
     setEditing(true)
+  }
+
+  // A screenshot of their LinkedIn, a card, an email signature: the AI fills in
+  // what it can read, and the fields stay editable.
+  async function contactFromPhoto(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setReading(true)
+    const found = await readPhoto(await shrinkPhoto(file, 1280))
+    setReading(false)
+    setContact(current => ({
+      linkedin: found.linkedin || current.linkedin,
+      email: found.email || current.email,
+    }))
   }
 
   async function saveContact(event) {
@@ -151,6 +177,10 @@ function DeqCard({ person, interactive = true, open = true }) {
 
             {editing ? (
               <form className="xcard-edit" onSubmit={saveContact}>
+                <button type="button" className="glass-pill" disabled={reading} onClick={() => contactPhoto.current.click()}>
+                  {reading ? 'Reading…' : 'Fill from a photo'}
+                </button>
+                <input ref={contactPhoto} type="file" accept="image/*" hidden onChange={contactFromPhoto} />
                 <input
                   placeholder="LinkedIn username or URL"
                   value={contact.linkedin}
@@ -164,6 +194,14 @@ function DeqCard({ person, interactive = true, open = true }) {
                 />
                 <button className="glass-pill solid" type="submit">Save</button>
               </form>
+            ) : asking ? (
+              <div className="xcard-foot">
+                <p className="xcard-ask">Reaching out, or just checking?</p>
+                <div className="xcard-actions wrap">
+                  <button className="glass-pill solid" onClick={() => logContact(asking)}>Reaching out</button>
+                  <button className="glass-pill" onClick={() => setAsking(null)}>Just checking</button>
+                </div>
+              </div>
             ) : updating ? (
               <div className="xcard-foot">
                 <p className="xcard-ask">How did you talk?</p>
@@ -183,12 +221,12 @@ function DeqCard({ person, interactive = true, open = true }) {
                 </button>
                 <div className="xcard-actions">
                   {person.linkedin && (
-                    <a className="glass-pill" href={linkedinUrl(person.linkedin)} target="_blank" rel="noreferrer">
+                    <a className="glass-pill" href={linkedinUrl(person.linkedin)} target="_blank" rel="noreferrer" onClick={() => setAsking('LinkedIn')}>
                       LinkedIn
                     </a>
                   )}
                   {person.email && (
-                    <a className="glass-pill" href={`mailto:${person.email}`}>Mail</a>
+                    <a className="glass-pill" href={`mailto:${person.email}`} onClick={() => setAsking('Mail')}>Mail</a>
                   )}
                   {!person.linkedin && !person.email && (
                     <button className="glass-pill" onClick={() => setEditing(true)}>

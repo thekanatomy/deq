@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { sendMagicLink, signInWithGoogle } from './sync'
+import { sendMagicLink, signInWithGoogle, verifyCode } from './sync'
 
 // Google in one tap, or an email link (no password). Used by the "Save your deq"
 // sheet and by Account in the menu.
 export default function SignIn() {
   const [email, setEmail] = useState('')
-  const [state, setState] = useState('idle') // idle | sending | sent | failed
+  const [state, setState] = useState('idle') // idle | sending | sent | checking | failed
+  const [code, setCode] = useState('')
   const [message, setMessage] = useState('')
 
   async function google() {
@@ -26,6 +27,7 @@ export default function SignIn() {
     setState('sending')
     try {
       await sendMagicLink(email.trim())
+      setMessage('')
       setState('sent')
     } catch (error) {
       setState('failed')
@@ -33,15 +35,52 @@ export default function SignIn() {
     }
   }
 
-  if (state === 'sent') {
+  async function checkCode(value) {
+    const digits = value.replace(/\D/g, '').slice(0, 6)
+    setCode(digits)
+    if (digits.length < 6) return
+    setState('checking')
+    try {
+      await verifyCode(email.trim(), digits)
+      // signed in: the sheet closes by itself and syncing starts
+    } catch {
+      setState('sent')
+      setCode('')
+      setMessage('That code didn’t work. Check the newest email and try again.')
+    }
+  }
+
+  if (state === 'sent' || state === 'checking') {
     return (
       <div className="signin-sent" aria-live="polite">
         <MailIcon />
-        <p className="signin-sent-title">Check your inbox</p>
+        <p className="signin-sent-title">Enter the code</p>
         <p className="signin-sent-text">
-          Tap the link we sent to <b>{email.trim()}</b>, on this phone, to finish.
+          We sent a 6-digit code to <b>{email.trim()}</b>.
         </p>
-        <button className="flow-skip" onClick={() => setState('idle')}>Use a different email</button>
+        <input
+          className="answer code-input"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          placeholder="123456"
+          maxLength={6}
+          autoFocus
+          value={code}
+          disabled={state === 'checking'}
+          onChange={event => checkCode(event.target.value)}
+          aria-label="6-digit code"
+        />
+        {message && state === 'sent' && <p className="signin-error" role="alert">{message}</p>}
+        {state === 'checking' && <p className="signin-sent-text">Checking…</p>}
+        <button
+          className="flow-skip"
+          onClick={() => {
+            setState('idle')
+            setMessage('')
+          }}
+        >
+          Use a different email
+        </button>
       </div>
     )
   }
@@ -71,7 +110,7 @@ export default function SignIn() {
           }}
         />
         <button className="primary-button" disabled={!email || state === 'sending'}>
-          {state === 'sending' ? 'Sending…' : 'Email Me a Link'}
+          {state === 'sending' ? 'Sending…' : 'Email Me a Code'}
         </button>
       </form>
 

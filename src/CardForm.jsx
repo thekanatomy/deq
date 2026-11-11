@@ -11,7 +11,7 @@ const FIELDS = [
   { key: 'role', label: 'Role', placeholder: 'Product analyst' },
   { key: 'company', label: 'Company', placeholder: 'Walmart', autoCapitalize: 'words' },
   { key: 'place', label: 'Met at', placeholder: 'Memorial Union' },
-  { key: 'note', label: 'Talked about', placeholder: 'What you spoke about' },
+  { key: 'note', label: 'Stood out', placeholder: 'Something to remember them by' },
 ]
 const CONTACT = [
   { key: 'linkedin', label: 'LinkedIn', placeholder: 'Username or link', autoCapitalize: 'none' },
@@ -119,3 +119,4 @@ export default function CardForm({ initial, title, subtitle, submitLabel, recent
     </motion.div>
   )
 }
+

@@ -8,11 +8,33 @@ import { accountsEnabled, signOut, syncNow, useAccount } from './sync'
 // each opening its own page that slides in from the right.
 const SPRING = { type: 'spring', bounce: 0, duration: 0.4 }
 
+// apple.com's menu: rows arrive one after another, each dropping a few pixels into
+// place while it comes into focus. Strong ease-out, about 60 ms apart.
+const APPLE_EASE = [0.32, 0.72, 0, 1]
+export function cascade(index) {
+  return {
+    initial: { opacity: 0, y: -10, filter: 'blur(8px)' },
+    animate: {
+      opacity: 1,
+      y: 0,
+      filter: 'blur(0px)',
+      transition: {
+        duration: 0.55,
+        ease: APPLE_EASE,
+        delay: 0.1 + index * 0.07,
+        // the fade eases in more gently than the drop, so each row visibly arrives
+        opacity: { duration: 0.45, ease: [0.25, 0.1, 0.25, 1], delay: 0.1 + index * 0.07 },
+      },
+    },
+  }
+}
+
 export default function MenuSheet({ owner, count, onOwner, onClose }) {
   const [page, setPage] = useState(null) // null | 'name' | 'account' | 'about'
   const [name, setName] = useState(owner)
   const account = useAccount()
   const [leaving, setLeaving] = useState(false)
+  const [cameBack, setCameBack] = useState(false) // back from a page: the list slides in
 
   function close() {
     onOwner(name.trim())
@@ -20,8 +42,10 @@ export default function MenuSheet({ owner, count, onOwner, onClose }) {
   }
 
   const rows = [
+    account.user
+      ? { id: 'account', label: 'Account', detail: account.user.email }
+      : { id: 'account', label: 'Sign In', detail: 'Back up your deq' },
     { id: 'name', label: 'Your Name', detail: owner || 'Not set' },
-    ...(accountsEnabled ? [{ id: 'account', label: 'Account', detail: account.user ? 'Signed in' : 'Sign in' }] : []),
     { id: 'about', label: 'About Deq' },
   ]
 
@@ -37,7 +61,14 @@ export default function MenuSheet({ owner, count, onOwner, onClose }) {
     >
       <div className="menu-bar">
         {page ? (
-          <button className="menu-icon" aria-label="Back" onClick={() => setPage(null)}>
+          <button
+            className="menu-icon"
+            aria-label="Back"
+            onClick={() => {
+              setCameBack(true)
+              setPage(null)
+            }}
+          >
             <BackIcon size={24} />
           </button>
         ) : (
@@ -48,12 +79,14 @@ export default function MenuSheet({ owner, count, onOwner, onClose }) {
         </button>
       </div>
 
-      <AnimatePresence mode="popLayout" initial={false}>
+      {/* initial stays on so the rows can cascade in; the list itself only slides
+          when coming back from a page */}
+      <AnimatePresence mode="popLayout">
         {page === null ? (
           <motion.nav
             key="list"
             className="menu-list"
-            initial={{ x: '-30%', opacity: 0 }}
+            initial={cameBack ? { x: '-30%', opacity: 0 } : false}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '-30%', opacity: 0 }}
             transition={SPRING}
@@ -63,17 +96,16 @@ export default function MenuSheet({ owner, count, onOwner, onClose }) {
                 key={row.id}
                 className="menu-row"
                 onClick={() => setPage(row.id)}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0, transition: { ...SPRING, delay: 0.03 * index } }}
+                {...cascade(index)}
               >
                 <span>{row.label}</span>
                 {row.detail && <span className="menu-detail">{row.detail}</span>}
                 <Chevron />
               </motion.button>
             ))}
-            <p className="menu-foot">
+            <motion.p className="menu-foot" {...cascade(rows.length)}>
               {count} {count === 1 ? 'person' : 'people'} in your deq
-            </p>
+            </motion.p>
           </motion.nav>
         ) : (
           <motion.section
@@ -136,11 +168,16 @@ export default function MenuSheet({ owner, count, onOwner, onClose }) {
                     {leaving ? 'Signing out…' : 'Sign Out'}
                   </button>
                 </>
+              ) : accountsEnabled ? (
+                <>
+                  <h2 className="menu-title">Sign In</h2>
+                  <p className="menu-text">Back up your deq, so it’s safe if you lose this phone and there on every device you use.</p>
+                  <SignIn />
+                </>
               ) : (
                 <>
-                  <h2 className="menu-title">Account</h2>
-                  <p className="menu-text">Sign in to back up your deq and keep it on every device you use.</p>
-                  <SignIn />
+                  <h2 className="menu-title">Sign In</h2>
+                  <p className="menu-text">Accounts are almost ready. Until then, everyone you add is saved on this phone.</p>
                 </>
               )
             )}

@@ -23,6 +23,7 @@ export default function Scanner({ onResult, onType, onClose }) {
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
   const fileRef = useRef(null)
+  const galleryRef = useRef(null)
   const doneRef = useRef(false)
   const [status, setStatus] = useState('starting') // starting | live | unavailable
   const [found, setFound] = useState(false)
@@ -91,7 +92,7 @@ export default function Scanner({ onResult, onType, onClose }) {
     finish({ photo, scanImage, ...(text ? parseScan(text) : {}) })
   }
 
-  // Fallback when the live camera isn't allowed: the phone's own camera app.
+  // A picked photo (gallery) or the fallback camera app: read it the same way as the shutter.
   async function fromFile(event) {
     const file = event.target.files?.[0]
     event.target.value = ''
@@ -114,6 +115,8 @@ export default function Scanner({ onResult, onType, onClose }) {
       <video ref={videoRef} className="scanner-video" playsInline muted />
       <canvas ref={canvasRef} hidden />
       <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={fromFile} />
+      {/* no capture attribute, so the phone offers its photo library */}
+      <input ref={galleryRef} type="file" accept="image/*" hidden onChange={fromFile} />
 
       <div className="scanner-shade" />
 
@@ -150,7 +153,13 @@ export default function Scanner({ onResult, onType, onClose }) {
         <button className="shutter" aria-label="Take a photo" onClick={capture}>
           <span />
         </button>
-        <span className="scanner-text placeholder" aria-hidden="true">Type It</span>
+        <button className="scanner-round gallery" aria-label="Choose from your photos" onClick={() => galleryRef.current.click()}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="3.5" />
+            <circle cx="9" cy="10" r="1.6" />
+            <path d="m21 16-5-5-9 9" />
+          </svg>
+        </button>
       </div>
     </motion.div>
   )

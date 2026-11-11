@@ -9,9 +9,9 @@ const DAY = 24 * 60 * 60 * 1000
 const now = Date.now()
 
 const SAMPLES = [
-  { id: 's1', name: 'Priya Nair', role: 'Product Designer', company: 'Walmart', place: 'Memorial Union', lastContacted: now - 200 * DAY, metAt: now - 200 * DAY, lastChannel: 'LinkedIn' },
-  { id: 's2', name: 'Marcus Lee', role: 'Recruiter', company: 'Google', place: 'Career Fair', lastContacted: now - 12 * DAY, metAt: now - 40 * DAY, lastChannel: 'Mail' },
-  { id: 's3', name: 'Ava Chen', role: 'Founder', company: 'Apple', place: 'Hackathon', lastContacted: now, metAt: now },
+  { id: 's1', name: 'VIP', role: 'Product Designer', company: 'Walmart', place: 'Memorial Union', lastContacted: now - 200 * DAY, metAt: now - 200 * DAY, lastChannel: 'LinkedIn' },
+  { id: 's2', name: 'VIP', role: 'Recruiter', company: 'Google', place: 'Career Fair', lastContacted: now - 12 * DAY, metAt: now - 40 * DAY, lastChannel: 'Mail' },
+  { id: 's3', name: 'VIP', role: 'Founder', company: 'Apple', place: 'Hackathon', lastContacted: now, metAt: now },
 ].map(person => ({ linkedin: '', email: '', ...person }))
 
 // where each card sits in the fan

@@ -52,8 +52,19 @@ export default function AddedMoment({ person, onDone }) {
             />
           </svg>
         </span>
-        <span className="sheet-subtitle">{person.name} is in your deq.</span>
+        <span className="sheet-subtitle">
+          {person.name.split(' ')[0]} is in your deq.
+          {person.followUpDays ? ` We’ll remind you ${remindIn(person.followUpDays)}.` : ''}
+        </span>
       </motion.h2>
     </motion.div>
   )
+}
+
+function remindIn(days) {
+  if (days === 7) return 'in a week'
+  if (days === 14) return 'in 2 weeks'
+  if (days === 30) return 'in a month'
+  if (days === 90) return 'in 3 months'
+  return `in ${days} days`
 }

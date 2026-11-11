@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { BackIcon, CloseIcon } from './icons'
 import { detectPlace } from './location'
 import { parseScan } from './scan'
@@ -28,7 +29,8 @@ const STEPS = [
   { key: 'place', question: 'Where are you?', hint: 'So you remember where you met.' },
   { key: 'vibe', question: 'How did it go?' },
   { key: 'followUp', question: 'When should you reach out?', hint: 'Deq will remind you.' },
-  { key: 'note', question: 'What did you talk about?', hint: 'A line is enough.' },
+  // the memory hook: one thing that makes this person easy to picture again
+  { key: 'note', question: 'What stood out?', hint: 'Something to remember them by.' },
 ]
 
 export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
@@ -47,11 +49,12 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
   const skipped = { name: Boolean(initial.name), work: Boolean(initial.company) }
   const [step, setStep] = useState(() => STEPS.findIndex(s => !skipped[s.key]))
   const [direction, setDirection] = useState(1)
-  const [locating, setLocating] = useState(initial.place ? 'idle' : 'finding') // idle | finding | found | failed
+  const [locating, setLocating] = useState(initial.place ? 'idle' : 'finding') // idle | finding | found | failed | elsewhere
   const needsReading = Boolean(initial.scanImage) && !(initial.name && initial.company)
   const [reading, setReading] = useState(needsReading ? 'reading' : 'idle') // idle | reading | read | failed
   const [readFrom, setReadFrom] = useState('')
   const inputRef = useRef(null)
+  const foundRef = useRef(null) // the place the phone found, to switch back to
   const stepRef = useRef(step)
   const fieldsRef = useRef(fields)
   useEffect(() => {
@@ -100,6 +103,7 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
     detectPlace()
       .then(found => {
         if (cancelled) return
+        if (found.place) foundRef.current = found
         setFields(previous => (previous.place ? previous : { ...previous, ...found }))
         setLocating(found.place ? 'found' : 'failed')
       })
@@ -263,17 +267,40 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
                   <PinIcon />
                   {locating === 'finding' && !fields.place ? 'Finding where you are…' : null}
                   {locating === 'failed' && !fields.place ? 'Couldn’t find your location' : null}
+                  {locating === 'elsewhere' && !fields.place ? 'Where did you meet?' : null}
                   {fields.place && (locating === 'found' ? 'Found you here' : 'Here')}
                 </div>
                 <input
                   ref={inputRef}
                   className="answer"
-                  placeholder="Memorial Union"
+                  placeholder={locating === 'elsewhere' ? 'Career Fair, Hayden Library…' : 'Memorial Union'}
                   enterKeyHint="next"
                   value={fields.place}
                   onChange={event => set('place', event.target.value)}
                   onKeyDown={onKeyDown}
                 />
+                {/* the phone knows where you are now, not always where you met.
+                    One button that stays put and flips, so tapping it never loses the keyboard. */}
+                {(locating === 'found' || locating === 'elsewhere') && foundRef.current && (
+                  <button
+                    className="flow-skip place-elsewhere"
+                    onMouseDown={event => event.preventDefault()}
+                    onClick={() => {
+                      if (locating === 'elsewhere') {
+                        setFields(previous => ({ ...previous, ...foundRef.current }))
+                        setLocating('found')
+                        return
+                      }
+                      flushSync(() => {
+                        setFields(previous => ({ ...previous, place: '', lat: undefined, lng: undefined }))
+                        setLocating('elsewhere')
+                      })
+                      inputRef.current?.focus()
+                    }}
+                  >
+                    {locating === 'elsewhere' ? `Use ${foundRef.current.place.split(',')[0]}` : 'Met somewhere else?'}
+                  </button>
+                )}
                 {recentPlaces.length > 0 && (
                   <div className="suggestions">
                     {recentPlaces
@@ -342,7 +369,7 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
                 ref={inputRef}
                 className="answer note"
                 rows={3}
-                placeholder="Internships at Walmart, both from Chennai…"
+                placeholder="Red jacket, also from Chennai, loves F1…"
                 value={fields.note}
                 onChange={event => set('note', event.target.value)}
                 onKeyDown={onKeyDown}

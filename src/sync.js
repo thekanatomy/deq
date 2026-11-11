@@ -40,8 +40,17 @@ export function signInWithGoogle() {
   return supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: home() } })
 }
 
+// Sends the sign-in email. With Supabase's email template showing {{ .Token }} it
+// carries a 6-digit code (the link still works too, for people on a laptop).
 export async function sendMagicLink(email) {
   const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: home() } })
+  if (error) throw error
+}
+
+// The code typed in the app. A code beats a link on iPhone: the link would open in
+// Safari, not in the deq on your Home Screen.
+export async function verifyCode(email, code) {
+  const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' })
   if (error) throw error
 }
 

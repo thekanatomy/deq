@@ -657,8 +657,11 @@ button {
   font-weight: var(--weight-bold);
 }
 
-.scanner-text.placeholder {
-  visibility: hidden;
+.scanner-round.gallery {
+  justify-self: end;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
 }
 
 .shutter {
@@ -1261,20 +1264,37 @@ button {
 
 /* ---------- Apple Music touches ---------- */
 
-/* Replay-style sentence: big, quiet grey, with the numbers in full colour */
+/* two numbers, read at a glance: big figure, quiet label under it */
 .summary {
+  display: flex;
+  gap: 2.5rem;
   margin: 0.75rem 0 0;
-  font-family: var(--font-display);
-  font-size: 1.625rem;
-  font-weight: 500;
-  line-height: 1.15;
-  letter-spacing: -0.03em;
-  color: var(--label-secondary);
 }
 
-.summary b {
+.summary .stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.summary .stat b {
+  font-family: var(--font-display);
+  font-size: 3.25rem;
   font-weight: var(--weight-bold);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
   color: var(--label);
+}
+
+.summary .stat.due b {
+  color: var(--tint);
+}
+
+.summary .stat span {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--label-secondary);
 }
 
 /* behind an open card the page takes on the card's colour, like an artist page */
@@ -2171,4 +2191,422 @@ h1.wordmark {
   :root {
     --page: #0b0b0d;
   }
+}
+
+/* "Met somewhere else?" under the auto-detected place */
+.place-elsewhere {
+  display: block;
+  margin: 0.5rem auto 0;
+  font-size: var(--size-callout);
+}
+
+/* ---------- opened inside Instagram & co. ---------- */
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  padding: calc(env(safe-area-inset-top) + 1rem) 1.5rem calc(env(safe-area-inset-bottom) + 2rem);
+  background: var(--bg);
+  color: var(--label);
+}
+
+.gate-arrow {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 0.5rem);
+  right: 1.25rem;
+  width: 2.25rem;
+  height: 3.375rem;
+  fill: none;
+  stroke: var(--tint-fill);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gate-body {
+  flex: 1;
+  display: grid;
+  align-content: center;
+  gap: 1rem;
+  max-width: 26rem;
+}
+
+.gate-eyebrow {
+  margin: 0;
+  color: var(--label-secondary);
+  font-size: var(--size-caption);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.gate-title {
+  margin: 0;
+  font-size: 2.125rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.gate-text {
+  margin: 0;
+  color: var(--label-secondary);
+  font-size: var(--size-body);
+  line-height: 1.45;
+}
+
+.gate-text b {
+  color: var(--label);
+}
+
+.gate-actions {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.primary-button.dark {
+  background: var(--label);
+  color: var(--bg);
+}
+
+/* ---------- the six-second intro ---------- */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(env(safe-area-inset-top) + 1rem) 1.5rem calc(env(safe-area-inset-bottom) + 2rem);
+  background: var(--page, var(--bg));
+  overflow: hidden;
+}
+
+.intro-skip {
+  align-self: flex-end;
+  min-height: 44px;
+  padding: 0 0.5rem;
+  border: 0;
+  background: none;
+  color: var(--label-secondary);
+  font-size: var(--size-body);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+.intro-stage {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  max-width: 22rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.intro-person {
+  position: absolute;
+  bottom: 30%;
+  width: 6.5rem;
+}
+
+.intro-person.left {
+  left: 8%;
+}
+
+.intro-person.right {
+  right: 8%;
+}
+
+.intro-figure {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.intro-hi {
+  position: absolute;
+  bottom: 62%;
+  right: 30%;
+  padding: 0.375rem 0.75rem;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--label);
+  font-weight: 700;
+}
+
+.intro-phone {
+  position: absolute;
+  right: -1.25rem;
+  top: 2.75rem;
+  width: 2.75rem;
+  height: 4.75rem;
+  border-radius: 0.75rem;
+  border: 3px solid var(--label);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.intro-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+}
+
+.intro-card {
+  display: flex;
+  flex-direction: column;
+  width: 13rem;
+  aspect-ratio: 5 / 7;
+  padding: 1.1rem;
+  box-sizing: border-box;
+  border-radius: 1.4rem;
+  background-size: 100% 100%;
+  color: #fff;
+  box-shadow: 0 24px 40px -18px rgba(0, 0, 0, 0.45);
+}
+
+.intro-card-company {
+  font-weight: 700;
+}
+
+.intro-card-name {
+  margin-top: auto;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+}
+
+.intro-card-days {
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  opacity: 0.75;
+}
+
+.intro-caption {
+  min-height: 5rem;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.intro-line {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.intro-line.big {
+  font-size: 3.25rem;
+  letter-spacing: -0.05em;
+}
+
+.intro-dots {
+  display: flex;
+  gap: 0.375rem;
+  margin-top: 1.25rem;
+}
+
+.intro-dots span {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: var(--separator);
+  transition: background 300ms var(--ease-out), width 300ms var(--ease-out);
+}
+
+.intro-dots span.on {
+  width: 1.25rem;
+  border-radius: 999px;
+  background: var(--label);
+}
+
+/* ---------- save sheet: the people you'd lose ---------- */
+.save-stack {
+  display: grid;
+  width: min(15rem, 70%);
+  margin: 0.75rem auto 0.25rem;
+}
+
+.save-stack-card {
+  display: flex;
+  align-items: flex-start;
+  height: 2.75rem;
+  margin-top: -1.125rem;
+  padding: 0.45rem 0.875rem 0;
+  border-radius: 0.875rem 0.875rem 0 0;
+  background-size: 100% 100%;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-align: left;
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.save-stack-card:first-child {
+  margin-top: 0;
+}
+
+.code-input {
+  width: 100%;
+  max-width: 14rem;
+  margin: 0.25rem 0;
+  font-size: 1.75rem !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+/* ---------- Home Screen tip ---------- */
+.home-icon {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  margin: 0.75rem auto 0;
+  border-radius: 1rem;
+  background: var(--label);
+  color: var(--bg);
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: -0.06em;
+}
+
+.home-steps {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 20rem;
+  margin: 0 auto 0.5rem;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  font-size: var(--size-body);
+}
+
+.home-steps li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.home-steps span {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+/* ---------- in-app reminder: "Say hi to Priya — red jacket, loves F1" ---------- */
+.nudge {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.875rem 1rem;
+  border: 0;
+  border-radius: 1.125rem;
+  background: var(--surface);
+  color: var(--label);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+.nudge:active {
+  transform: scale(0.98);
+}
+
+.nudge-title {
+  font-size: var(--size-body);
+  font-weight: var(--weight-bold);
+}
+
+.nudge-more {
+  color: var(--label-secondary);
+  font-weight: var(--weight-text);
+}
+
+.nudge-text {
+  overflow: hidden;
+  color: var(--label-secondary);
+  font-size: var(--size-callout);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* long emails in the menu stay on one line */
+.menu-detail {
+  min-width: 0;
+  max-width: 45%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* "Reading…" while the AI looks at a contact photo */
+.glass-pill:disabled {
+  opacity: 0.6;
+}
+
+
+/* ---------- categories: full screen, like the menu ---------- */
+
+.categories-list {
+  padding-top: 1rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* the deq wordmark's weight and tracking, sized so "Categories" fits the width */
+.categories-title {
+  margin: 0 0 2rem;
+  margin-left: -0.05em;
+  font-family: var(--font-display);
+  font-size: clamp(3.25rem, 16.5vw, 4.75rem);
+  font-weight: 850;
+  line-height: 0.9;
+  letter-spacing: -0.065em;
+  color: var(--label);
+}
+
+.category-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.category-name small {
+  color: var(--label-secondary);
+  font-size: var(--size-callout);
+  font-weight: var(--weight-text);
+  letter-spacing: 0;
+}
+
+/* the one you're looking at: full ink, everything else a step quieter */
+.category-row {
+  color: var(--label-secondary);
+}
+
+.category-row.current {
+  color: var(--label);
+  font-weight: var(--weight-bold);
+}
+
+.categories-group {
+  margin: 2.25rem 0 0.5rem;
+  color: var(--label-secondary);
+  font-size: var(--size-callout);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }

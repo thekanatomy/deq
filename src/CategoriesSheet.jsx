@@ -1,55 +1,57 @@
 import { motion } from 'motion/react'
+import { CloseIcon } from './icons'
+import { cascade } from './MenuSheet.jsx'
 
-// Wallet-style sheet: grouped rows, a tick on the one you're looking at.
+// Full screen, like the menu: a title as big as the deq wordmark, then
+// evenly spaced rows that drop in one after another (apple.com's menu).
 export default function CategoriesSheet({ filters, current, onPick, onClose }) {
   const main = filters.filter(filter => !filter.group)
   const companies = filters.filter(filter => filter.group === 'company')
+  let index = 0
 
   const row = filter => (
-    <button key={filter.id} className="row row-button category-row" onClick={() => onPick(filter.id)}>
-      <span>
+    <motion.button
+      key={filter.id}
+      className={filter.id === current ? 'menu-row category-row current' : 'menu-row category-row'}
+      aria-current={filter.id === current ? 'true' : undefined}
+      onClick={() => onPick(filter.id)}
+      {...cascade(index++)}
+    >
+      <span className="category-name">
         {filter.name}
         {filter.hint && <small>{filter.hint}</small>}
       </span>
-      <span className="category-count">{filter.count}</span>
-      <span className="category-tick" aria-hidden="true">{filter.id === current ? '✓' : ''}</span>
-    </button>
+      <span className="menu-detail">{filter.count}</span>
+    </motion.button>
   )
 
   return (
     <motion.div
-      className="scrim"
+      className="menu"
+      role="dialog"
+      aria-label="Categories"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0, transition: { duration: 0.2 } }}
-      onClick={onClose}
+      exit={{ opacity: 0, transition: { duration: 0.18 } }}
+      transition={{ duration: 0.22 }}
     >
-      <motion.div
-        className="sheet categories-sheet"
-        role="dialog"
-        aria-label="Categories"
-        initial={{ y: '100%' }}
-        animate={{ y: 0 }}
-        exit={{ y: '100%', transition: { type: 'spring', bounce: 0, duration: 0.3 } }}
-        transition={{ type: 'spring', bounce: 0, duration: 0.45 }}
-        drag="y"
-        dragConstraints={{ top: 0, bottom: 0 }}
-        dragElastic={{ top: 0.05, bottom: 0.6 }}
-        onDragEnd={(_, info) => {
-          if (info.offset.y > 80 || info.velocity.y > 500) onClose()
-        }}
-        onClick={event => event.stopPropagation()}
-      >
-        <span className="grabber" />
-        <h2 className="sheet-heading">Show</h2>
-        <div className="grouped">{main.map(row)}</div>
+      <div className="menu-bar">
+        <span />
+        <button className="menu-icon" aria-label="Close categories" onClick={onClose}>
+          <CloseIcon size={24} />
+        </button>
+      </div>
+
+      <nav className="menu-list categories-list">
+        <motion.h1 className="categories-title" {...cascade(index++)}>Categories</motion.h1>
+        {main.map(row)}
         {companies.length > 0 && (
           <>
-            <p className="group-label">Companies</p>
-            <div className="grouped categories-companies">{companies.map(row)}</div>
+            <motion.p className="categories-group" {...cascade(index++)}>Companies</motion.p>
+            {companies.map(row)}
           </>
         )}
-      </motion.div>
+      </nav>
     </motion.div>
   )
 }

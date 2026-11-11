@@ -114,8 +114,20 @@ function clean(raw) {
     const value = typeof raw[key] === 'string' ? raw[key].trim() : ''
     if (value) result[key] = value.slice(0, 200)
   }
-  if (result.linkedin && !/^https?:\/\//i.test(result.linkedin)) result.linkedin = `https://${result.linkedin.replace(/^\/+/, '')}`
-  if (result.linkedin && !/linkedin\.com\//i.test(result.linkedin)) delete result.linkedin
+  // keep LinkedIn only as a clean profile link: linkedin.com/in/<handle>
+  if (result.linkedin) {
+    const path = result.linkedin.match(/linkedin\.com\/((?:in|company)\/[^/?#\s]+)/i)
+    if (path) result.linkedin = `https://www.linkedin.com/${path[1]}`
+    else delete result.linkedin
+  }
+  // a profile screenshot shows the name but not the link, so the AI tends to guess
+  // linkedin.com/in/<first-last>. Real links often end in extra characters, so a
+  // link that is only the name, read off a screen or a face, is dropped: no dead links.
+  if (result.linkedin && result.name && !['card', 'badge'].includes(result.kind)) {
+    const fromName = result.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    const handle = result.linkedin.split('/in/')[1]?.toLowerCase()
+    if (handle === fromName) delete result.linkedin
+  }
   if (result.website && !/^https?:\/\//i.test(result.website)) result.website = `https://${result.website}`
   return result
 }
