@@ -68,7 +68,7 @@ export default function CategoriesSheet({ filters, current, onPick, onClose }) {
                 {...cascade(index)}
               >
                 <span className="category-name">{filter.name}</span>
-                <span className="menu-detail">{filter.count}</span>
+                <span className="category-count">{filter.count}</span>
               </motion.button>
             ))}
           </motion.nav>
@@ -88,7 +88,7 @@ export default function CategoriesSheet({ filters, current, onPick, onClose }) {
               {...cascade(1)}
             >
               <span className="category-name">{everyone.name}</span>
-              <span className="menu-detail">{everyone.count}</span>
+              <span className="category-count">{everyone.count}</span>
             </motion.button>
             {groups.map((group, index) => {
               const inside = picked?.group === group.id
@@ -101,7 +101,11 @@ export default function CategoriesSheet({ filters, current, onPick, onClose }) {
                 >
                   <span className="category-name">{group.name}</span>
                   {/* the one you're looking at, or how many there are */}
-                  <span className="menu-detail">{inside ? picked.name : group.items.length}</span>
+                  {inside ? (
+                    <span className="menu-detail">{picked.name}</span>
+                  ) : (
+                    <span className="category-count">{group.items.length}</span>
+                  )}
                   <Chevron />
                 </motion.button>
               )

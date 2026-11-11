@@ -1,5 +1,12 @@
 import { companyOf, roleOf } from './text'
 
+const DAY = 24 * 60 * 60 * 1000
+
+// waiting on you: their follow-up date has come, or (no follow-up set) it's been a month
+export function isWaiting(person, now = Date.now()) {
+  return person.followUpDays ? now >= person.lastContacted + person.followUpDays * DAY : now - person.lastContacted > 30 * DAY
+}
+
 // The kind of role, so "Senior Product Analyst" and "Product Analyst" sit together
 // and every kind of student is just "Student".
 const SENIORITY = /\b(senior|sr\.?|junior|jr\.?|associate|assoc\.?|lead|principal|staff|head of|i{1,3}|iv)\b/gi

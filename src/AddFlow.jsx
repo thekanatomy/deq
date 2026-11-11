@@ -52,7 +52,7 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
   const [direction, setDirection] = useState(1)
   const [locating, setLocating] = useState(initial.place ? 'idle' : 'finding') // idle | finding | found | failed | elsewhere
   const needsReading = Boolean(initial.scanImage) && !(initial.name && initial.company)
-  const [reading, setReading] = useState(needsReading ? 'reading' : 'idle') // idle | reading | read | failed | busy
+  const [reading, setReading] = useState(needsReading ? 'reading' : 'idle') // idle | reading | done | read | failed | busy
   const [readFrom, setReadFrom] = useState('')
   const inputRef = useRef(null)
   const foundRef = useRef(null) // the place the phone found, to switch back to
@@ -83,8 +83,15 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
   useEffect(() => {
     if (!needsReading) return
     const controller = new AbortController()
+    let advance
+    // never keep you waiting forever: after 25 s, stop and let you type
+    const giveUp = setTimeout(() => {
+      controller.abort()
+      setReading('busy')
+    }, 25_000)
     readPhoto(initial.scanImage, { signal: controller.signal }).then(found => {
       if (controller.signal.aborted) return
+      clearTimeout(giveUp)
       const { kind, busy, ...details } = found
       if (busy) return setReading('busy')
       if (!details.name && !details.company) return setReading('failed')
@@ -96,19 +103,32 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
       else if (kind && kind !== 'person') delete filled.photo
       setFields(filled)
       setReadFrom(SOURCES[kind] ?? SOURCES.other)
-      setReading('read')
+      setReading('done') // the ring closes into a tick
       navigator.vibrate?.(15)
-      // still on the first question and it's answered now: move on by itself
-      if (stepRef.current === 0 && filled.name) {
-        setDirection(1)
-        setStep(filled.company ? 2 : 1)
-      }
+      advance = setTimeout(() => {
+        setReading('read')
+        // still on the first question and it's answered now: move on by itself
+        if (stepRef.current === 0 && filled.name) {
+          setDirection(1)
+          setStep(filled.company ? 2 : 1)
+        }
+      }, 700)
     })
-    return () => controller.abort()
+    return () => {
+      controller.abort()
+      clearTimeout(giveUp)
+      clearTimeout(advance)
+    }
     // the photo is fixed for the life of the flow
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+
+  // while the photo is read, typing waits: the answers are about to fill in
+  const waiting = reading === 'reading' || reading === 'done'
+  useEffect(() => {
+    if (!waiting) inputRef.current?.focus({ preventScroll: true })
+  }, [waiting])
 
   const current = STEPS[step]
   const isLast = step === STEPS.length - 1
@@ -203,7 +223,7 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
           />
         </div>
 
-        <button className="flow-save" disabled={!hasName} onClick={save}>Save</button>
+        <button className="flow-save" disabled={!hasName || waiting} onClick={save}>Save</button>
       </div>
 
 
@@ -237,8 +257,10 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
               <>
                 <input
                   ref={inputRef}
-                  className="answer"
-                  placeholder="Name"
+                  className={waiting ? 'answer waiting' : 'answer'}
+                  placeholder={waiting ? 'Reading the photo…' : 'Name'}
+                  readOnly={waiting}
+                  aria-busy={waiting}
                   autoCapitalize="words"
                   autoCorrect="off"
                   enterKeyHint="next"
@@ -246,12 +268,6 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
                   onChange={event => onNameChange(event.target.value)}
                   onKeyDown={onKeyDown}
                 />
-                {reading === 'reading' && (
-                  <p className="reading" aria-live="polite">
-                    <span className="reading-dot" />
-                    Reading the photo…
-                  </p>
-                )}
                 {reading === 'failed' && <p className="answer-hint">Couldn’t read a name from the photo.</p>}
                 {reading === 'busy' && <p className="answer-hint">Photo reading is busy right now. Type the name for this one.</p>}
                 {fields.linkedin && <p className="answer-hint">LinkedIn linked ✓</p>}
@@ -337,12 +353,12 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
 
             {current.key === 'vibe' && (
               <div className="slider-block">
-                <Face value={fields.vibe} />
+                <Face value={fields.vibe} colour={VIBE_COLOURS[fields.vibe - 1]} />
                 <p className="slider-value">{VIBES[fields.vibe - 1]}</p>
                 <input
                   ref={inputRef}
-                  className="slider"
-                  style={{ '--fill': `${((fields.vibe - 1) / 4) * 100}%` }}
+                  className="slider vibe"
+                  style={{ '--fill': `${((fields.vibe - 1) / 4) * 100}%`, '--vibe': VIBE_COLOURS[fields.vibe - 1] }}
                   type="range"
                   min="1"
                   max="5"
@@ -401,24 +417,92 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
       </div>
 
       <div className="flow-actions">
-        <button className="primary-button" disabled={!canContinue} onClick={next}>
-          {isLast ? 'Add to deq' : 'Continue'}
-        </button>
-        {!current.required && !isLast && current.key !== 'vibe' && current.key !== 'followUp' ? (
-          <button className="flow-skip" onClick={next}>Skip</button>
-        ) : (
-          <span className="flow-skip placeholder" aria-hidden="true">Skip</span>
-        )}
+        <AnimatePresence mode="wait" initial={false}>
+          {waiting ? (
+            <motion.div
+              key="reading"
+              className="flow-reading"
+              role="status"
+              aria-live="polite"
+              initial={{ opacity: 0, scale: 0.92, filter: 'blur(6px)' }}
+              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, scale: 0.96, filter: 'blur(6px)' }}
+              transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
+            >
+              <ReadingRing done={reading === 'done'} />
+              <span className={reading === 'done' ? 'flow-reading-label done' : 'flow-reading-label'}>
+                {reading === 'done' ? 'Got it' : 'Reading the photo'}
+              </span>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="actions"
+              className="flow-buttons"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
+            >
+              <button className="primary-button" disabled={!canContinue} onClick={next}>
+                {isLast ? 'Add to deq' : 'Continue'}
+              </button>
+              {!current.required && !isLast && current.key !== 'vibe' && current.key !== 'followUp' ? (
+                <button className="flow-skip" onClick={next}>Skip</button>
+              ) : (
+                <span className="flow-skip placeholder" aria-hidden="true">Skip</span>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   )
 }
 
+// Apple-style activity ring: an arc that breathes as it turns, then closes into a
+// full circle and draws a tick when the photo has been read.
+function ReadingRing({ done }) {
+  return (
+    <svg className={done ? 'reading-ring done' : 'reading-ring'} viewBox="0 0 36 36" width="36" height="36" aria-hidden="true">
+      <circle className="reading-ring-track" cx="18" cy="18" r="15" pathLength="1" />
+      <motion.circle
+        className="reading-ring-arc"
+        cx="18"
+        cy="18"
+        r="15"
+        pathLength="1"
+        initial={false}
+        animate={done ? { strokeDasharray: '1 1' } : undefined}
+        transition={{ type: 'spring', bounce: 0, duration: 0.35 }}
+      />
+      {done && (
+        <motion.path
+          className="reading-ring-tick"
+          d="M11.5 18.5l4.5 4.5 8.5-9"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ delay: 0.15, type: 'spring', bounce: 0, duration: 0.35 }}
+        />
+      )}
+    </svg>
+  )
+}
+
 // A face whose smile follows the slider: flat at "quick hello", wide at "stay in touch".
-function Face({ value }) {
+// Apple's system colours, red to green: how it went, at a glance.
+const VIBE_COLOURS = ['#FF3B30', '#FF9500', '#FFCC00', '#A3D94B', '#34C759']
+
+function Face({ value, colour }) {
   const curve = 13 + (value - 3) * 3.2 // control point of the mouth
   return (
-    <svg className="face" viewBox="0 0 64 64" aria-hidden="true">
+    <motion.svg
+      className="face"
+      viewBox="0 0 64 64"
+      aria-hidden="true"
+      initial={false}
+      animate={{ color: colour }}
+      transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
+    >
       <circle cx="32" cy="32" r="30" fill="currentColor" opacity="0.18" />
       <circle cx="23" cy="26" r="3.2" fill="currentColor" />
       <circle cx="41" cy="26" r="3.2" fill="currentColor" />
@@ -431,7 +515,7 @@ function Face({ value }) {
         strokeWidth="3.2"
         strokeLinecap="round"
       />
-    </svg>
+    </motion.svg>
   )
 }
 

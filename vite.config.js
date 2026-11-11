@@ -9,7 +9,15 @@ function devApi() {
     name: 'deq-dev-api',
     configureServer(server) {
       const env = loadEnv(server.config.mode, process.cwd(), '')
-      for (const key of ['GROQ_API_KEY', 'GROQ_MODEL', 'GEMINI_API_KEY', 'GEMINI_MODEL']) if (env[key]) process.env[key] = env[key]
+      for (const key of [
+        'GROQ_API_KEY',
+        'GROQ_API_KEY_2',
+        'GROQ_MODEL',
+        'GROQ_FALLBACK_MODELS',
+        'GEMINI_API_KEY',
+        'GEMINI_MODEL',
+        'GEMINI_BACKUP_MODEL',
+      ]) if (env[key]) process.env[key] = env[key]
 
       server.middlewares.use('/api/scan', async (req, res) => {
         const send = (status, body) => {

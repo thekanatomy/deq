@@ -3,10 +3,11 @@
 // The API key only ever lives here on the server, never in the phone's code.
 //
 // Tries readers in order until one answers:
-//   1. Gemini 3.1 Flash-Lite (GEMINI_API_KEY): free tier, stable.
-//   2. A second Gemini model on the same key: busy or rate-limited models are
+//   1. Groq (GROQ_API_KEY): the fastest.
+//   2. Groq with a second key (GROQ_API_KEY_2), if set.
+//   3. Gemini 3.1 Flash-Lite (GEMINI_API_KEY): free tier, stable, slower.
+//   4. A second Gemini model on the same key: busy or rate-limited models are
 //      counted separately, so one being down rarely means both are.
-//   3. Groq (GROQ_API_KEY).
 // A model that's only briefly overloaded (503) gets one quick retry first.
 
 const GROQ_MODEL = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b'
@@ -50,19 +51,22 @@ export class VisionError extends Error {
 
 export async function readPhoto({ image, mimeType = 'image/jpeg' } = {}) {
   const groqKey = process.env.GROQ_API_KEY
+  const groqKey2 = process.env.GROQ_API_KEY_2 // optional second Groq key, tried when the first is used up
   const geminiKey = process.env.GEMINI_API_KEY
-  if (!groqKey && !geminiKey) throw new VisionError(501, 'Set GROQ_API_KEY (or GEMINI_API_KEY) on the server')
+  if (!groqKey && !groqKey2 && !geminiKey) throw new VisionError(501, 'Set GROQ_API_KEY (or GEMINI_API_KEY) on the server')
   if (typeof image !== 'string' || !image) throw new VisionError(400, 'Send the photo as base64 in "image"')
   if (image.length > MAX_BASE64) throw new VisionError(413, 'Photo is too large')
   if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(mimeType)) throw new VisionError(400, 'Unsupported image type')
 
+  // Groq first: it answers in about a second; Gemini can take much longer
   const readers = [
+    groqKey && { name: `Groq (${GROQ_MODEL})`, read: () => askGroq(image, mimeType, groqKey) },
+    groqKey2 && { name: `Groq key 2 (${GROQ_MODEL})`, read: () => askGroq(image, mimeType, groqKey2) },
     geminiKey && { name: `Gemini (${GEMINI_MODEL})`, read: () => askGemini(GEMINI_MODEL, image, mimeType, geminiKey) },
     geminiKey && GEMINI_BACKUP_MODEL && {
       name: `Gemini (${GEMINI_BACKUP_MODEL})`,
       read: () => askGemini(GEMINI_BACKUP_MODEL, image, mimeType, geminiKey),
     },
-    groqKey && { name: `Groq (${GROQ_MODEL})`, read: () => askGroq(image, mimeType, groqKey) },
   ].filter(Boolean)
   let text
   let lastError

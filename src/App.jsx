@@ -9,6 +9,8 @@ import DetailsSheet from './DetailsSheet'
 import { CategoriesIcon, CloseIcon, MoreIcon, PlusIcon } from './icons.jsx'
 import MenuSheet from './MenuSheet.jsx'
 import CategoriesSheet from './CategoriesSheet'
+import Insights from './Insights'
+import { isWaiting } from './filters'
 import { filtersFor } from './filters'
 import SaveSheet from './SaveSheet'
 import Welcome from './Welcome'
@@ -141,6 +143,7 @@ export default function App() {
   // categories: everyone, who's gone quiet, met this month, or one company
   const [filterId, setFilterId] = useState('all')
   const [categoriesOpen, setCategoriesOpen] = useState(false)
+  const [insightsOpen, setInsightsOpen] = useState(false)
   const filters = filtersFor(everyone)
   const filter = filters.find(option => option.id === filterId) ?? filters[0]
   const list = filter.id === 'all' ? everyone : everyone.filter(filter.test)
@@ -246,6 +249,14 @@ export default function App() {
 
   return (
     <MotionConfig reducedMotion="user">
+      {/* phones turned sideways: deq is made for portrait */}
+      <div className="rotate-note" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+          <path d="M11 18.5h2" />
+        </svg>
+        <p>Turn your phone upright</p>
+      </div>
       <LayoutGroup>
       <AnimatePresence>
         {openLook && (
@@ -328,7 +339,7 @@ export default function App() {
             style={{ transformOrigin: 'top left' }}
           >
             {empty && <h1 className="wordmark">deq</h1>}
-            {list.length > 0 && filter.id === 'all' && <Summary people={list} />}
+            {list.length > 0 && filter.id === 'all' && <Summary people={list} onOpen={() => setInsightsOpen(true)} />}
             {filter.id === 'all' && <Nudge people={list} onOpen={openCard} />}
             {filter.id !== 'all' && (
               <button className="filter-chip" onClick={() => setFilterId('all')}>
@@ -471,6 +482,18 @@ export default function App() {
             onClose={() => setMenuOpen(false)}
           />
         )}
+        {insightsOpen && (
+          <Insights
+            key="insights"
+            people={everyone}
+            onOpenPerson={id => {
+              setInsightsOpen(false)
+              setFilterId('all')
+              openCard(id)
+            }}
+            onClose={() => setInsightsOpen(false)}
+          />
+        )}
         {categoriesOpen && (
           <CategoriesSheet
             key="categories"
@@ -521,32 +544,39 @@ export default function App() {
   )
 }
 
-const MONTH = 30 * 24 * 60 * 60 * 1000
 
 // Two numbers you can read at a glance: who you met this month, who's waiting on you.
-function Summary({ people }) {
+function Summary({ people, onOpen }) {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
   const metThisMonth = people.filter(person => (person.metAt ?? person.lastContacted) >= monthStart).length
-  // waiting on you: their follow-up date has come, or (no follow-up set) it's been a month
-  const waiting = people.filter(person =>
-    person.followUpDays
-      ? Date.now() >= person.lastContacted + person.followUpDays * 24 * 60 * 60 * 1000
-      : Date.now() - person.lastContacted > MONTH,
-  ).length
+  const waiting = people.filter(person => isWaiting(person)).length
   const monthName = now.toLocaleDateString('en-GB', { month: 'long' })
 
+  // both numbers open Insights; the chevron says they can be tapped
   return (
     <div className="summary">
-      <div className="stat">
+      <button className="stat" onClick={onOpen}>
         <b>{metThisMonth}</b>
-        <span>met in {monthName}</span>
-      </div>
-      <div className={`stat${waiting > 0 ? ' due' : ''}`}>
+        <span>
+          met in {monthName} <StatChevron />
+        </span>
+      </button>
+      <button className={`stat${waiting > 0 ? ' due' : ''}`} onClick={onOpen}>
         <b>{waiting}</b>
-        <span>{waiting === 0 ? 'all caught up' : 'waiting on you'}</span>
-      </div>
+        <span>
+          {waiting === 0 ? 'all caught up' : 'waiting on you'} <StatChevron />
+        </span>
+      </button>
     </div>
+  )
+}
+
+function StatChevron() {
+  return (
+    <svg className="stat-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9.5 5.5 16 12l-6.5 6.5" />
+    </svg>
   )
 }
 

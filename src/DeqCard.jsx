@@ -88,6 +88,13 @@ function DeqCard({ person, interactive = true, open = true }) {
   const metAt = person.metAt ?? person.lastContacted
   const daysLabel = days === 0 ? 'Today' : `${days} ${days === 1 ? 'day' : 'days'}`
 
+  // Opens LinkedIn or Mail only after you've said why, so the answer is never skipped.
+  // Called straight from the tap, so the phone allows the new tab.
+  function openChannel(channel) {
+    if (channel === 'LinkedIn') window.open(linkedinUrl(person.linkedin), '_blank', 'noopener')
+    if (channel === 'Mail') window.location.href = `mailto:${person.email}`
+  }
+
   async function logContact(channel) {
     await db.cards.update(person.id, { lastContacted: Date.now(), lastChannel: channel })
     setUpdating(false)
@@ -198,8 +205,24 @@ function DeqCard({ person, interactive = true, open = true }) {
               <div className="xcard-foot">
                 <p className="xcard-ask">Reaching out, or just checking?</p>
                 <div className="xcard-actions wrap">
-                  <button className="glass-pill solid" onClick={() => logContact(asking)}>Reaching out</button>
-                  <button className="glass-pill" onClick={() => setAsking(null)}>Just checking</button>
+                  <button
+                    className="glass-pill solid"
+                    onClick={() => {
+                      openChannel(asking)
+                      logContact(asking)
+                    }}
+                  >
+                    Reaching out
+                  </button>
+                  <button
+                    className="glass-pill"
+                    onClick={() => {
+                      openChannel(asking)
+                      setAsking(null)
+                    }}
+                  >
+                    Just checking
+                  </button>
                 </div>
               </div>
             ) : updating ? (
@@ -221,12 +244,18 @@ function DeqCard({ person, interactive = true, open = true }) {
                 </button>
                 <div className="xcard-actions">
                   {person.linkedin && (
-                    <a className="glass-pill" href={linkedinUrl(person.linkedin)} target="_blank" rel="noreferrer" onClick={() => setAsking('LinkedIn')}>
+                    <a className="glass-pill" href={linkedinUrl(person.linkedin)} target="_blank" rel="noreferrer" onClick={event => {
+                        event.preventDefault()
+                        setAsking('LinkedIn')
+                      }}>
                       LinkedIn
                     </a>
                   )}
                   {person.email && (
-                    <a className="glass-pill" href={`mailto:${person.email}`} onClick={() => setAsking('Mail')}>Mail</a>
+                    <a className="glass-pill" href={`mailto:${person.email}`} onClick={event => {
+                        event.preventDefault()
+                        setAsking('Mail')
+                      }}>Mail</a>
                   )}
                   {!person.linkedin && !person.email && (
                     <button className="glass-pill" onClick={() => setEditing(true)}>
