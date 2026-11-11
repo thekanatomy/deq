@@ -3,10 +3,12 @@ import { useEffect, useRef, useState } from 'react'
 import { BackIcon, CloseIcon } from './icons'
 import { detectPlace } from './location'
 import { parseScan } from './scan'
+import { readPhoto } from './vision'
 
 // Adding someone in a few taps, one question at a time. Names come from the QR or a
 // pasted LinkedIn link, the place comes from your location, two sliders replace typing,
-// and the only thing you write is what you talked about.
+// and the only thing you write is what you talked about. A photo of a card, badge or
+// LinkedIn screen is read by the AI while the flow opens, and fills the answers in.
 // Apple-style: white screen, centred question, one blue button at the bottom.
 const VIBES = ['Quick hello', 'Nice chat', 'Good conversation', 'Really clicked', 'Must stay in touch']
 const FOLLOW_UPS = [
@@ -17,6 +19,8 @@ const FOLLOW_UPS = [
   { days: 90, label: 'in 3 months' },
   { days: null, label: 'No reminder' },
 ]
+
+const SOURCES = { card: 'their card', badge: 'their badge', screen: 'the screen', person: 'the photo', other: 'the photo' }
 
 const STEPS = [
   { key: 'name', question: 'Who did you meet?', hint: 'Type a name, or paste their LinkedIn link.', required: true },
@@ -44,7 +48,44 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
   const [step, setStep] = useState(() => STEPS.findIndex(s => !skipped[s.key]))
   const [direction, setDirection] = useState(1)
   const [locating, setLocating] = useState(initial.place ? 'idle' : 'finding') // idle | finding | found | failed
+  const needsReading = Boolean(initial.scanImage) && !(initial.name && initial.company)
+  const [reading, setReading] = useState(needsReading ? 'reading' : 'idle') // idle | reading | read | failed
+  const [readFrom, setReadFrom] = useState('')
   const inputRef = useRef(null)
+  const stepRef = useRef(step)
+  const fieldsRef = useRef(fields)
+  useEffect(() => {
+    stepRef.current = step
+    fieldsRef.current = fields
+  })
+
+  // Read the photo with the AI. Only empty answers are filled, so nothing you typed is overwritten.
+  useEffect(() => {
+    if (!needsReading) return
+    const controller = new AbortController()
+    readPhoto(initial.scanImage, { signal: controller.signal }).then(found => {
+      if (controller.signal.aborted) return
+      const { kind, ...details } = found
+      if (!details.name && !details.company) return setReading('failed')
+      const previous = fieldsRef.current
+      const filled = { ...previous }
+      for (const [key, value] of Object.entries(details)) if (!String(previous[key] ?? '').trim()) filled[key] = value
+      // a photo of a card or a screen isn't their face, so it doesn't become the avatar
+      if (kind && kind !== 'person') delete filled.photo
+      setFields(filled)
+      setReadFrom(SOURCES[kind] ?? SOURCES.other)
+      setReading('read')
+      navigator.vibrate?.(15)
+      // still on the first question and it's answered now: move on by itself
+      if (stepRef.current === 0 && filled.name) {
+        setDirection(1)
+        setStep(filled.company ? 2 : 1)
+      }
+    })
+    return () => controller.abort()
+    // the photo is fixed for the life of the flow
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
 
   const current = STEPS[step]
@@ -85,8 +126,9 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
 
   function save() {
     if (!hasName) return
+    const { scanImage: _scanImage, ...kept } = fields
     const clean = Object.fromEntries(
-      Object.entries(fields).map(([key, entry]) => [key, typeof entry === 'string' ? entry.trim() : entry]),
+      Object.entries(kept).map(([key, entry]) => [key, typeof entry === 'string' ? entry.trim() : entry]),
     )
     onSave(clean)
   }
@@ -158,8 +200,12 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
             exit="leave"
             transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
           >
-            {initial.name && current.key !== 'name' && step === STEPS.findIndex(s => !skipped[s.key]) && (
-              <p className="flow-scanned">Scanned {initial.name}{initial.linkedin ? ' from LinkedIn' : ''}</p>
+            {reading === 'read' && current.key !== 'name' && (step === 1 || step === 2) ? (
+              <p className="flow-scanned">Read {fields.name} from {readFrom}</p>
+            ) : (
+              initial.name && current.key !== 'name' && step === STEPS.findIndex(s => !skipped[s.key]) && (
+                <p className="flow-scanned">Scanned {initial.name}{initial.linkedin ? ' from LinkedIn' : ''}</p>
+              )
             )}
             <h2 className="question-text">{current.question}</h2>
             {current.hint && <p className="question-hint">{current.hint}</p>}
@@ -177,6 +223,13 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
                   onChange={event => onNameChange(event.target.value)}
                   onKeyDown={onKeyDown}
                 />
+                {reading === 'reading' && (
+                  <p className="reading" aria-live="polite">
+                    <span className="reading-dot" />
+                    Reading the photo…
+                  </p>
+                )}
+                {reading === 'failed' && <p className="answer-hint">Couldn’t read a name from the photo.</p>}
                 {fields.linkedin && <p className="answer-hint">LinkedIn linked ✓</p>}
               </>
             )}

@@ -81,13 +81,14 @@ export default function Scanner({ onResult, onType, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Shutter: take a photo of the person or their card. If the frame holds a QR, use that too.
+  // Shutter: photograph whatever is in front — a card, a badge, a LinkedIn screen, the person.
+  // A QR in the frame is read straight away; otherwise the AI reads the sharper copy.
   async function capture() {
     const video = videoRef.current
     if (status !== 'live' || !video.videoWidth) return fileRef.current.click()
     const text = readQR(video, video.videoWidth, video.videoHeight, canvasRef.current)
-    const photo = await frameToBlob(video)
-    finish({ photo, ...(text ? parseScan(text) : {}) })
+    const [photo, scanImage] = await Promise.all([frameToBlob(video), frameToBlob(video, 1280)])
+    finish({ photo, scanImage, ...(text ? parseScan(text) : {}) })
   }
 
   // Fallback when the live camera isn't allowed: the phone's own camera app.
@@ -98,7 +99,8 @@ export default function Scanner({ onResult, onType, onClose }) {
     const bitmap = await createImageBitmap(file)
     const text = readQR(bitmap, bitmap.width, bitmap.height, canvasRef.current)
     bitmap.close()
-    finish({ photo: await shrinkPhoto(file), ...(text ? parseScan(text) : {}) })
+    const [photo, scanImage] = await Promise.all([shrinkPhoto(file), shrinkPhoto(file, 1280)])
+    finish({ photo, scanImage, ...(text ? parseScan(text) : {}) })
   }
 
   return (
@@ -139,7 +141,7 @@ export default function Scanner({ onResult, onType, onClose }) {
             ? 'Live camera is off here. Tap the shutter to take a photo instead.'
             : found
               ? 'Got it'
-              : 'Point at a LinkedIn QR or business card'}
+              : 'Point at a QR, card, badge or screen, then tap'}
         </p>
       </div>
 

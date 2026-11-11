@@ -15,16 +15,17 @@
   --group: #ffffff;           /* secondarySystemGroupedBackground */
   --glass: rgba(118, 118, 128, 0.14);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);     /* strong ease-out for presses and fades */
-  --font-display: 'Bricolage Grotesque Variable', 'Manrope Variable', system-ui, sans-serif; /* names, titles, questions */
-  /* ---------- type system: Manrope, three weights, one case rule ----------
-     Fonts: Bricolage Grotesque for names, titles and questions; Manrope for everything else.
-     Weights: 500 text · 700 buttons, names, labels, titles.
+  --font: 'Inter Variable', -apple-system, system-ui, sans-serif;
+  --font-display: var(--font); /* one font everywhere */
+  /* ---------- type system: Inter only, three weights, one case rule ----------
+     Font: Inter, the closest open font to Tesla's Universal Sans, for every word in the app.
+     Weights: 400 text · 600 buttons, names, labels, titles.
      Case: on the card, buttons and labels are UPPERCASE (Kanish's card design).
            In the app, buttons use Title Case; questions and hints are sentences.
      App sizes follow Apple's text styles; card sizes are % of the card's width. */
-  --weight-text: 500;
-  --weight-bold: 700;
-  --weight-title: 700;      /* Bricolage titles */
+  --weight-text: 400;
+  --weight-bold: 600;
+  --weight-title: 600;
 
   --size-display: 2.5rem;   /* screen title, e.g. "Kanish's deq" */
   --size-title: 1.875rem;   /* form questions */
@@ -46,7 +47,7 @@
     radial-gradient(90% 58% at 20% 0%, #5abcd1 0%, #4ba8cb 32%, rgba(44, 120, 184, 0) 100%),
     radial-gradient(45% 35% at 100% 0%, #1f459c 0%, rgba(31, 69, 156, 0) 100%),
     linear-gradient(180deg, #2a64ae 0%, #2c69b1 45%, #2558a8 75%, #204ba0 100%);
-  font: 100%/1.4 'Manrope Variable', -apple-system, system-ui, sans-serif;
+  font: 100%/1.4 var(--font);
   color: var(--label);
   -webkit-tap-highlight-color: transparent;
 }
@@ -141,7 +142,7 @@ button {
   line-height: 1.05;
   font-size: var(--size-display);
   font-weight: var(--weight-title);
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
 }
 
 .plus-cross {
@@ -738,7 +739,7 @@ button {
   line-height: 1.15;
   font-size: var(--size-title);
   font-weight: var(--weight-title);
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
 }
 
 .answer-group {
@@ -915,13 +916,13 @@ button {
   font-size: 1.75rem;
   font-weight: var(--weight-title);
   line-height: 1.15;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
 }
 
 .sheet-subtitle {
   display: block;
   margin-top: 0.375rem;
-  font-family: 'Manrope Variable', -apple-system, system-ui, sans-serif;
+  font-family: var(--font);
   font-size: var(--size-body);
   font-weight: var(--weight-text);
   line-height: 1.35;
@@ -1189,7 +1190,7 @@ button {
   font-size: 2.25rem;
   font-weight: var(--weight-title);
   line-height: 1.05;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
 }
 
 .zoom-meta {
@@ -1202,6 +1203,51 @@ button {
   margin-top: 0.25rem;
   font-weight: var(--weight-text);
   opacity: 0.85;
+}
+
+/* ---------- Apple Music touches ---------- */
+
+/* Replay-style sentence: big, quiet grey, with the numbers in full colour */
+.summary {
+  margin: 0.75rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.625rem;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: var(--label-secondary);
+}
+
+.summary b {
+  font-weight: var(--weight-bold);
+  color: var(--label);
+}
+
+/* behind an open card the page takes on the card's colour, like an artist page */
+.page-tint {
+  position: fixed;
+  inset: -10%;
+  z-index: -1;
+  background: var(--card-background);
+  filter: blur(80px) saturate(1.2);
+}
+
+.page-tint::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 0%, var(--bg) 85%);
+}
+
+body {
+  isolation: isolate;
+}
+
+/* ---------- header buttons: Apple Music's frosted circles ---------- */
+
+.top-bar .glass-button {
+  width: 40px;
+  height: 40px;
 }
 
 /* ---------- add flow: Apple-style, white, centred ---------- */
@@ -1220,7 +1266,7 @@ button {
   text-wrap: balance;
   font-size: 2rem;
   line-height: 1.1;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
 }
 
 .question-hint {
@@ -1435,6 +1481,140 @@ button {
   letter-spacing: -0.02em;
 }
 
+/* ---------- menu, laid out like tesla.com ---------- */
+
+.menu {
+  position: fixed;
+  inset: 0;
+  z-index: 225;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.menu-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: calc(env(safe-area-inset-top) + 1rem) 0.75rem 0;
+}
+
+.menu-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--label);
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out);
+}
+
+.menu-icon:active {
+  transform: scale(0.9);
+  opacity: 0.6;
+}
+
+.menu-list,
+.menu-page {
+  padding: 4.5rem 1.5rem calc(env(safe-area-inset-bottom) + 2rem);
+}
+
+/* big, evenly spaced rows: text left, chevron right, no dividers */
+.menu-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--label);
+  font-size: 1.375rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-align: left;
+  cursor: pointer;
+  transition: opacity 160ms var(--ease-out);
+}
+
+.menu-row + .menu-row {
+  margin-top: 0.25rem;
+}
+
+.menu-row:active {
+  opacity: 0.5;
+}
+
+.menu-detail {
+  margin-left: auto;
+  color: var(--label-secondary);
+  font-size: var(--size-body);
+  font-weight: var(--weight-text);
+}
+
+.menu-chevron {
+  flex: none;
+  margin-left: auto;
+  color: var(--label-secondary);
+}
+
+.menu-detail + .menu-chevron {
+  margin-left: 0;
+}
+
+.menu-foot {
+  margin: 3rem 0 0;
+  color: var(--label-secondary);
+  font-size: var(--size-callout);
+  font-weight: var(--weight-text);
+}
+
+.menu-title {
+  margin: 0 0 1rem;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: var(--weight-title);
+  letter-spacing: -0.03em;
+}
+
+.menu-text {
+  margin: 0 0 1rem;
+  max-width: 30rem;
+  color: var(--label-secondary);
+  font-size: var(--size-body);
+  font-weight: var(--weight-text);
+  line-height: 1.5;
+}
+
+.menu-input {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.875rem 1rem;
+  border: 0;
+  border-radius: 0.875rem;
+  background: var(--surface);
+  color: var(--label);
+  font-size: 1.25rem;
+  font-weight: var(--weight-bold);
+  box-sizing: border-box;
+  outline: none;
+}
+
+.menu-input:focus {
+  box-shadow: 0 0 0 2px var(--tint-fill);
+}
+
+.menu-save {
+  margin-top: 1.25rem;
+}
+
 /* ---------- dark mode (Apple's dark palette) ---------- */
 @media (prefers-color-scheme: dark) {
   :root {
@@ -1454,4 +1634,42 @@ button {
     --glass: rgba(118, 118, 128, 0.3);
     color-scheme: dark;
   }
+}
+
+/* ---------- AI reading a photo ---------- */
+.reading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.875rem 0 0;
+  color: var(--label-secondary);
+  font-size: var(--size-callout);
+  font-weight: var(--weight-bold);
+  background: linear-gradient(90deg, var(--label-secondary) 0%, var(--label) 50%, var(--label-secondary) 100%) 0 0 / 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: reading-sheen 1.4s linear infinite;
+}
+
+.reading-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--tint-fill);
+  -webkit-text-fill-color: initial;
+  animation: reading-pulse 1s var(--ease-out) infinite alternate;
+}
+
+@keyframes reading-sheen {
+  to { background-position: -200% 0; }
+}
+
+@keyframes reading-pulse {
+  from { transform: scale(0.7); opacity: 0.5; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reading, .reading-dot { animation: none; }
 }
