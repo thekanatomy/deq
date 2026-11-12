@@ -21,6 +21,8 @@ function readQR(source, width, height, canvas) {
   return jsQR(image.data, size, size, { inversionAttempts: 'attemptBoth' })?.data ?? null
 }
 
+const SCANNABLE = ['LinkedIn profile', 'Business card', 'Event badge', 'QR code', 'Screenshot']
+
 export default function Scanner({ onResult, onType, onClose }) {
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
@@ -141,13 +143,22 @@ export default function Scanner({ onResult, onType, onClose }) {
           {status === 'live' && !found && <span className="scan-line" />}
         </motion.div>
 
-        <p className="scanner-hint">
-          {status === 'unavailable'
-            ? 'Live camera is off here. Tap the shutter to take a photo instead.'
-            : found
-              ? 'Got it'
-              : 'Point at a QR, card, badge or screen, then tap'}
-        </p>
+        {found ? (
+          <p className="scanner-hint">Got it</p>
+        ) : (
+          <div className="scanner-guide">
+            <p className="scanner-hint">
+              {status === 'unavailable' ? 'Tap the shutter to take a photo' : 'Scan anything with their name on it'}
+            </p>
+            {/* what counts: so nobody thinks it's business cards only */}
+            <ul className="scanner-kinds" aria-label="Things you can scan">
+              {SCANNABLE.map(kind => (
+                <li key={kind}>{kind}</li>
+              ))}
+            </ul>
+            <p className="scanner-tip">Hold it steady so the words are sharp</p>
+          </div>
+        )}
       </div>
 
       <div className="scanner-bottom">

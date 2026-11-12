@@ -10,6 +10,7 @@ import { CategoriesIcon, CloseIcon, MoreIcon, PlusIcon, SearchIcon } from './ico
 import MenuSheet from './MenuSheet.jsx'
 import CategoriesSheet from './CategoriesSheet'
 import Insights from './Insights'
+import Waiting from './Waiting'
 import Search from './Search'
 import MyCard from './MyCard'
 import SharedCard from './SharedCard'
@@ -83,7 +84,19 @@ function useHeight(ref) {
 
 export default function App() {
   // Newest contact first; the person you've gone longest without is the fully visible card.
-  const people = useLiveQuery(() => db.cards.orderBy('lastContacted').reverse().filter(visible).toArray())
+  // iOS Safari can drop the connection to the phone's database after the tab sleeps
+  // ("Connection to Indexed Database server lost"). Reopen it and try again instead of crashing.
+  const people = useLiveQuery(async () => {
+    const read = () => db.cards.orderBy('lastContacted').reverse().filter(visible).toArray()
+    try {
+      return await read()
+    } catch (error) {
+      console.warn('deq: reopening the database after', error)
+      db.close()
+      await db.open()
+      return read()
+    }
+  })
   const account = useAccount()
   const [askToSave, setAskToSave] = useState(false)
   const pendingSave = useRef(false)
@@ -184,6 +197,7 @@ export default function App() {
   const [filterId, setFilterId] = useState('all')
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [insightsOpen, setInsightsOpen] = useState(false)
+  const [waitingOpen, setWaitingOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false) // false | { scope, focusId }
   // a card's place was tapped: open search on the map, centred on that person
   useEffect(() => {
@@ -359,7 +373,7 @@ export default function App() {
                 </motion.button>
               ) : (
                 <motion.h1 key="title" className="top-name" {...POP}>
-                  {empty ? '' : filter.label ?? (owner ? `${owner}’s deq` : 'deq')}
+                  {empty ? '' : 'deq'}
                 </motion.h1>
               )}
             </AnimatePresence>
@@ -414,7 +428,7 @@ export default function App() {
             transition={SETTLE}
             style={{ transformOrigin: 'top left' }}
           >
-            {list.length > 0 && filter.id === 'all' && <Summary people={list} onOpen={() => setInsightsOpen(true)} onInstall={canInstall ? startInstall : null} />}
+            {list.length > 0 && filter.id === 'all' && <Summary people={list} onOpen={() => setInsightsOpen(true)} onWaiting={() => setWaitingOpen(true)} onInstall={canInstall ? startInstall : null} />}
             {filter.id === 'all' && <Nudge people={list} onOpen={openCard} />}
             {filter.id !== 'all' && (
               <button className="filter-chip" onClick={() => setFilterId('all')}>
@@ -599,6 +613,18 @@ export default function App() {
             onClose={() => setSearchOpen(false)}
           />
         )}
+        {waitingOpen && (
+          <Waiting
+            key="waiting"
+            people={everyone}
+            onOpenPerson={id => {
+              setWaitingOpen(false)
+              setFilterId('all')
+              openCard(id)
+            }}
+            onClose={() => setWaitingOpen(false)}
+          />
+        )}
         {insightsOpen && (
           <Insights
             key="insights"
@@ -700,14 +726,14 @@ export default function App() {
 
 
 // Two numbers you can read at a glance: who you met this month, who's waiting on you.
-function Summary({ people, onOpen, onInstall }) {
+function Summary({ people, onOpen, onWaiting, onInstall }) {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
   const metThisMonth = people.filter(person => (person.metAt ?? person.lastContacted) >= monthStart).length
   const waiting = people.filter(person => isWaiting(person)).length
   const monthName = now.toLocaleDateString('en-GB', { month: 'long' })
 
-  // both numbers open Insights; the chevron says they can be tapped
+  // met opens Insights, waiting opens the people waiting on you; the chevron says they can be tapped
   return (
     <div className="summary">
       <button className="stat" onClick={onOpen}>
@@ -716,7 +742,7 @@ function Summary({ people, onOpen, onInstall }) {
           met in {monthName} <StatChevron />
         </span>
       </button>
-      <button className={`stat${waiting > 0 ? ' due' : ''}`} onClick={onOpen}>
+      <button className={`stat${waiting > 0 ? ' due' : ''}`} onClick={onWaiting}>
         <b>{waiting}</b>
         <span>
           {waiting === 0 ? 'all caught up' : 'waiting on you'} <StatChevron />

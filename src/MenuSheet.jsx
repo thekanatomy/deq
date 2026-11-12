@@ -29,15 +29,13 @@ export function cascade(index) {
   }
 }
 
-export default function MenuSheet({ owner, count, onOwner, onMyCard, onClose }) {
-  const [page, setPage] = useState(null) // null | 'name' | 'account' | 'about'
-  const [name, setName] = useState(owner)
+export default function MenuSheet({ count, onMyCard, onClose }) {
+  const [page, setPage] = useState(null) // null | 'account' | 'about'
   const account = useAccount()
   const [leaving, setLeaving] = useState(false)
   const [cameBack, setCameBack] = useState(false) // back from a page: the list slides in
 
   function close() {
-    onOwner(name.trim())
     onClose()
   }
 
@@ -46,7 +44,6 @@ export default function MenuSheet({ owner, count, onOwner, onMyCard, onClose }) 
       ? { id: 'account', label: 'Account', detail: account.user.email }
       : { id: 'account', label: 'Sign In', detail: 'Back up your deq' },
     { id: 'card', label: 'Your Card', detail: 'Apple Wallet' },
-    { id: 'name', label: 'Your Name', detail: owner || 'Not set' },
     { id: 'about', label: 'About Deq' },
   ]
 
@@ -117,36 +114,6 @@ export default function MenuSheet({ owner, count, onOwner, onMyCard, onClose }) 
             exit={{ x: '30%', opacity: 0 }}
             transition={SPRING}
           >
-            {page === 'name' && (
-              <>
-                <h2 className="menu-title">Your Name</h2>
-                <p className="menu-text">It titles your deck, like “Kanish’s deq”.</p>
-                <input
-                  className="menu-input"
-                  placeholder="Kanish"
-                  autoFocus
-                  autoCapitalize="words"
-                  enterKeyHint="done"
-                  value={name}
-                  onChange={event => setName(event.target.value)}
-                  onKeyDown={event => {
-                    if (event.key === 'Enter') {
-                      onOwner(name.trim())
-                      setPage(null)
-                    }
-                  }}
-                />
-                <button
-                  className="primary-button menu-save"
-                  onClick={() => {
-                    onOwner(name.trim())
-                    setPage(null)
-                  }}
-                >
-                  Save
-                </button>
-              </>
-            )}
             {page === 'account' && (
               account.user ? (
                 <>

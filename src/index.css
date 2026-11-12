@@ -639,6 +639,42 @@ button {
   font-weight: var(--weight-bold);
 }
 
+.scanner-guide {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  padding: 0 1.25rem;
+}
+
+/* what you can scan, as small glass chips */
+.scanner-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.375rem;
+  max-width: 21rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.scanner-kinds li {
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.scanner-tip {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.65);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+  font-size: 0.8125rem;
+}
+
 .scanner-bottom {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -4346,3 +4382,182 @@ html.sideways body {
   place-items: center;
   min-height: 60vh;
 }
+
+/* ---------- waiting on you ---------- */
+.waiting-lead {
+  margin: -1rem 0 1.25rem 0.25rem;
+  color: var(--label-secondary);
+  font-size: var(--size-body);
+}
+
+/* the options: one row of pills that scrolls sideways if it has to */
+.waiting-options {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 -1.25rem 0.5rem;
+  padding: 0 1.25rem 0.25rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.waiting-options::-webkit-scrollbar { display: none; }
+
+.waiting-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex: none;
+  height: 36px;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--label);
+  font: inherit;
+  font-size: var(--size-callout);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  transition: background 160ms var(--ease-out), color 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+.waiting-option b {
+  color: var(--label-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.waiting-option.active {
+  background: var(--label);
+  color: var(--bg);
+}
+.waiting-option.active b { color: inherit; opacity: 0.6; }
+.waiting-option:active { transform: scale(0.95); }
+
+.waiting-section {
+  margin-top: 0.75rem;
+  padding: 1.125rem 1rem 0.5rem;
+  border-radius: 1.25rem;
+  background: var(--surface);
+}
+.waiting-section .insight-label { margin: 0 0 0.125rem 0.125rem; }
+.waiting-count {
+  color: var(--label-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.waiting-note {
+  margin: 0 0 0.5rem 0.125rem;
+  color: var(--label-secondary);
+  font-size: var(--size-footnote, 0.8125rem);
+}
+
+.waiting-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.waiting-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0;
+}
+.waiting-row + .waiting-row {
+  border-top: 0.5px solid var(--separator, rgba(128, 128, 128, 0.25));
+}
+
+.waiting-person {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.waiting-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--label-secondary);
+  font-size: var(--size-callout);
+  font-weight: var(--weight-bold);
+}
+.waiting-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.waiting-who {
+  display: grid;
+  min-width: 0;
+}
+.waiting-who > * {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.waiting-who b {
+  color: var(--label);
+  font-size: var(--size-body);
+}
+.waiting-who span {
+  color: var(--label-secondary);
+  font-size: var(--size-footnote, 0.8125rem);
+}
+.waiting-who .waiting-why { color: var(--label-tertiary, var(--label-secondary)); }
+.waiting-who .waiting-why.due { color: #FF3B30; font-weight: var(--weight-bold); }
+
+.waiting-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex: none;
+}
+.waiting-done,
+.waiting-later {
+  display: grid;
+  place-items: center;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: var(--size-footnote, 0.8125rem);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  transition: transform 140ms var(--ease-out);
+}
+.waiting-done {
+  padding: 0 0.875rem;
+  background: var(--label);
+  color: var(--bg);
+}
+.waiting-later {
+  width: 34px;
+  background: var(--bg);
+  color: var(--label);
+}
+.waiting-done:active,
+.waiting-later:active { transform: scale(0.92); }
+
+.waiting-empty {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 3rem 0;
+  color: var(--label-secondary);
+}
+.waiting-empty span {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #34C759;
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.waiting-empty p { margin: 0; font-weight: var(--weight-bold); }
