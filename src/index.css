@@ -4561,3 +4561,162 @@ html.sideways body {
   font-weight: 700;
 }
 .waiting-empty p { margin: 0; font-weight: var(--weight-bold); }
+
+/* ---------- iOS-style switch (menu) ---------- */
+.menu-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1.25rem 0 0.5rem;
+  padding: 0.875rem 1rem;
+  border-radius: 1rem;
+  background: var(--surface);
+  cursor: pointer;
+}
+.menu-toggle span {
+  display: grid;
+  color: var(--label);
+  font-size: var(--size-body);
+  font-weight: var(--weight-bold);
+}
+.menu-toggle small {
+  color: var(--label-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+.menu-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.menu-toggle i {
+  position: relative;
+  flex: none;
+  width: 51px;
+  height: 31px;
+  border-radius: 999px;
+  background: rgba(120, 120, 128, 0.32);
+  transition: background 200ms var(--ease-out);
+}
+.menu-toggle i::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.16);
+  transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.menu-toggle input:checked + i { background: #34C759; }
+.menu-toggle input:checked + i::after { transform: translateX(20px); }
+.menu-toggle input:focus-visible + i { outline: 2px solid var(--tint-fill); outline-offset: 2px; }
+
+/* ---------- reading a scan: the moment people film ---------- */
+.scan-reading {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+}
+.scan-reading-photo {
+  position: absolute;
+  inset: 0;
+  background: #111 center / cover no-repeat;
+}
+.scan-reading-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  pointer-events: none;
+}
+/* one band of light crossing the photo, again and again while it reads */
+.scan-reading-sweep {
+  position: absolute;
+  inset: -20% -60%;
+  background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.16) 50%, transparent 58%);
+  animation: scan-sweep 2.2s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  pointer-events: none;
+}
+@keyframes scan-sweep {
+  from { transform: translateX(-60%); }
+  to { transform: translateX(60%); }
+}
+
+.scan-reading-badge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 58%;
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+}
+.scan-reading-word {
+  font-size: 4.5rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.45) 30%, #fff 45%, #fff 55%, rgba(255, 255, 255, 0.45) 70%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: scan-shimmer 1.4s linear infinite;
+}
+@keyframes scan-shimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -100% 0; }
+}
+.scan-reading-label {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: var(--size-callout);
+  font-weight: 600;
+}
+
+.scan-reading-chip {
+  position: absolute;
+  left: 50%;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  font-size: var(--size-callout);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.scan-reading-card {
+  position: absolute;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 2rem);
+  width: min(78%, 22rem);
+  margin-left: calc(min(78%, 22rem) / -2);
+  pointer-events: none;
+}
+
+.scan-reading-done {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(env(safe-area-inset-top) + 4.5rem);
+  width: max-content;
+  margin: 0 auto;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  background: rgba(52, 199, 89, 0.95);
+  font-size: var(--size-callout);
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-reading-sweep,
+  .scan-reading-word { animation: none; }
+}

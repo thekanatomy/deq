@@ -9,6 +9,7 @@ import { cropFace } from './face'
 import { searchPlaces } from './places'
 import DateWheel from './Wheel.jsx'
 import { openReminder } from './calendar'
+import ScanReading from './ScanReading'
 
 // Adding someone in a few taps, one question at a time. Names come from the QR or a
 // pasted LinkedIn link, the place comes from your location, two sliders replace typing,
@@ -137,7 +138,7 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
       else if (kind && kind !== 'person') delete filled.photo
       setFields(filled)
       setReadFrom(SOURCES[kind] ?? SOURCES.other)
-      setReading('done') // the ring closes into a tick
+      setReading('done') // the found words fly into their card
       navigator.vibrate?.(15)
       advance = setTimeout(() => {
         setReading('read')
@@ -146,7 +147,7 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
           setDirection(1)
           setStep(filled.company ? 2 : 1)
         }
-      }, 700)
+      }, 1900) // long enough for the card to land
     })
     return () => {
       controller.abort()
@@ -272,11 +273,22 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
     <motion.div
       // picking a place: the list takes the room, everything else steps aside for the keyboard
       className={placeOptions.length > 0 && current.key === 'place' ? 'flow picking' : 'flow'}
-      initial={{ y: '100%' }}
+      // from a scan, the frozen photo replaces the camera in place; otherwise slide up
+      initial={needsReading ? false : { y: '100%' }}
       animate={{ y: 0 }}
       exit={{ y: '100%', transition: { type: 'spring', bounce: 0, duration: 0.3 } }}
       transition={{ type: 'spring', bounce: 0, duration: 0.45 }}
     >
+      <AnimatePresence>
+        {waiting && (
+          <ScanReading
+            key="scan-reading"
+            image={initial.photo ?? initial.scanImage}
+            phase={reading === 'done' ? 'done' : 'reading'}
+            person={fields}
+          />
+        )}
+      </AnimatePresence>
 
       <div className="flow-top">
         <button className="flow-icon" aria-label={step === 0 ? 'Cancel' : 'Back'} onClick={back}>

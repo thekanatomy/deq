@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { BackIcon, CloseIcon } from './icons'
 import SignIn from './SignIn'
-import { accountsEnabled, signOut, syncNow, useAccount } from './sync'
+import { accountsEnabled, setBackup, signOut, syncNow, useAccount } from './sync'
 
 // Full-screen menu in the style of tesla.com: big, evenly spaced rows with a chevron,
 // each opening its own page that slides in from the right.
@@ -119,11 +119,26 @@ export default function MenuSheet({ count, onMyCard, onClose }) {
                 <>
                   <h2 className="menu-title">Account</h2>
                   <p className="menu-text">
-                    Signed in as <b>{account.user.email}</b>. Everyone in your deq is backed up to your account and
-                    comes back when you sign in on another phone.
+                    Signed in as <b>{account.user.email}</b>. Your deq always lives on this phone first and works
+                    offline. With backup on, a copy goes to your account so it comes back on a new phone.
                   </p>
+                  <label className="menu-toggle">
+                    <span>
+                      Back up to my account
+                      <small>{account.backup ? 'On' : 'Off: only on this phone'}</small>
+                    </span>
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      checked={account.backup}
+                      onChange={event => setBackup(event.target.checked)}
+                    />
+                    <i aria-hidden="true" />
+                  </label>
                   <p className="menu-status" aria-live="polite">{syncLabel(account)}</p>
-                  <button className="primary-button menu-save" onClick={() => syncNow()}>Sync Now</button>
+                  {account.backup && (
+                    <button className="primary-button menu-save" onClick={() => syncNow()}>Sync Now</button>
+                  )}
                   <button
                     className="flow-skip menu-signout"
                     disabled={leaving}
@@ -171,7 +186,8 @@ function Chevron() {
   )
 }
 
-function syncLabel({ status, lastSynced }) {
+function syncLabel({ status, lastSynced, backup }) {
+  if (!backup) return 'Backup is off. New people stay on this phone and go up when you turn it back on.'
   if (status === 'syncing') return 'Syncing…'
   if (status === 'offline') return 'Offline. It will sync when you’re back online.'
   if (status === 'error') return 'Couldn’t sync. Try again in a moment.'

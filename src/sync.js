@@ -17,7 +17,16 @@ const BUCKET = 'photos'
 const PAGE = 500
 
 // ---------- a tiny store the UI can watch ----------
-let state = { user: null, status: 'idle', lastSynced: null } // status: idle | syncing | synced | offline | error
+// Backup is on unless you turn it off. Off: everything stays on this phone only,
+// changes wait (still marked) and go up the moment you turn it back on.
+function readBackup() {
+  try {
+    return localStorage.getItem('deq-backup') !== 'off'
+  } catch {
+    return true
+  }
+}
+let state = { user: null, status: 'idle', lastSynced: null, backup: readBackup() } // status: idle | syncing | synced | offline | error
 const watchers = new Set()
 function setState(changes) {
   state = { ...state, ...changes }
@@ -54,10 +63,25 @@ export async function verifyCode(email, code) {
   if (error) throw error
 }
 
+export function setBackup(on) {
+  try {
+    if (on) localStorage.removeItem('deq-backup')
+    else localStorage.setItem('deq-backup', 'off')
+  } catch {
+    // private mode: it still applies until the page closes
+  }
+  setState({ backup: on, status: on ? state.status : 'idle' })
+  if (on) syncNow()
+}
+
 // Sync whatever is left, then clear this phone so the next person starts empty.
+// If anything hasn't reached your account (backup off, offline, an error), the
+// cards stay on this phone: signing out never loses someone.
 export async function signOut() {
   await syncNow().catch(() => {})
+  const unsent = await db.cards.where('dirty').equals(1).count()
   await supabase.auth.signOut()
+  if (unsent > 0) return
   await db.cards.clear()
   for (const name of Object.keys(localStorage)) if (name.startsWith('deq-pulled-')) localStorage.removeItem(name)
 }
@@ -74,7 +98,7 @@ let running = null
 let again = false
 
 export function syncNow() {
-  if (!state.user) return Promise.resolve()
+  if (!state.user || !state.backup) return Promise.resolve()
   if (running) {
     again = true
     return running
