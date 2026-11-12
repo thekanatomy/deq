@@ -1,3 +1,5 @@
+import { readCard } from './share'
+
 // Turns whatever a QR code contains into card fields.
 // Handles LinkedIn profile QR codes, vCards (most business-card QR codes),
 // MECARDs and plain email links. Anything else comes back empty.
@@ -56,6 +58,9 @@ function parseMeCard(text) {
 
 export function parseScan(text) {
   const trimmed = text.trim()
+  // someone's Deq card (their Wallet pass or share link): everything is in the link
+  const card = readCard(trimmed)
+  if (card) return card
   if (/^BEGIN:VCARD/i.test(trimmed)) return parseVCard(trimmed)
   if (/^MECARD:/i.test(trimmed)) return parseMeCard(trimmed)
   if (/^mailto:/i.test(trimmed)) return { email: trimmed.slice(7).split('?')[0] }

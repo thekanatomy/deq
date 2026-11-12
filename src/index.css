@@ -1191,11 +1191,17 @@ button {
   position: fixed;
   inset: 0;
   z-index: 240;
-  display: grid;
-  place-items: center;
   overflow: hidden;
-  cursor: zoom-out;
-  perspective: 1200px;
+  /* glass for circles and rows: white on dark colours, dark on light ones */
+  --zoom-glass: rgba(255, 255, 255, 0.16);
+  --zoom-glass-strong: rgba(255, 255, 255, 0.26);
+  --zoom-line: rgba(255, 255, 255, 0.16);
+}
+
+.zoom.dark-ink {
+  --zoom-glass: rgba(0, 0, 0, 0.07);
+  --zoom-glass-strong: rgba(0, 0, 0, 0.12);
+  --zoom-line: rgba(0, 0, 0, 0.1);
 }
 
 /* the brand's colours, blown up and blurred into the whole screen */
@@ -1211,22 +1217,42 @@ button {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 40%, transparent 30%, rgba(0, 0, 0, 0.25) 100%);
+  background: radial-gradient(circle at 50% 30%, transparent 30%, rgba(0, 0, 0, 0.25) 100%);
 }
 
-.zoom-stage {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: min(82vw, 22rem);
-  padding-bottom: 6dvh;
+.zoom-close {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 0.75rem);
+  right: 1.25rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--zoom-glass-strong);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  color: inherit;
+  cursor: pointer;
+}
+
+.zoom-scroll {
+  position: absolute;
+  inset: 0;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  max-width: 30rem;
+  margin: 0 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: calc(env(safe-area-inset-top) + 4rem) 1.5rem calc(env(safe-area-inset-bottom) + 3rem);
 }
 
 .zoom-card {
-  width: 100%;
-  transform-style: preserve-3d;
-  touch-action: none;
+  width: min(72vw, 19rem);
+  margin: 0 auto;
 }
 
 .zoom-card .xcard {
@@ -1235,31 +1261,119 @@ button {
     0 30px 60px -20px rgba(0, 0, 0, 0.45);
 }
 
-.zoom-caption {
+/* name at a normal size, left-aligned like a contact card */
+.zoom-head {
   margin-top: 1.75rem;
-  text-align: center;
-  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.18);
 }
 
 .zoom-name {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 2.25rem;
-  font-weight: var(--weight-title);
-  line-height: 1.05;
-  letter-spacing: -0.03em;
+  font-size: 1.625rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
 }
 
 .zoom-meta {
-  margin: 0.5rem 0 0;
+  margin: 0.25rem 0 0;
   font-size: var(--size-body);
-  font-weight: var(--weight-bold);
+  opacity: 0.8;
 }
 
-.zoom-meta.soft {
-  margin-top: 0.25rem;
-  font-weight: var(--weight-text);
-  opacity: 0.85;
+/* round actions with their name underneath, like Apple Contacts */
+.zoom-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.zoom-actions.grid {
+  row-gap: 1.125rem;
+  margin-top: 0.875rem;
+}
+
+.zoom-action {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 0.4375rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.zoom-circle {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--zoom-glass);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  transition: transform 160ms var(--ease-out), background 160ms var(--ease-out);
+}
+
+.zoom-action:active .zoom-circle {
+  transform: scale(0.92);
+  background: var(--zoom-glass-strong);
+}
+
+.zoom-circle.done {
+  background: #34c759;
+  color: #fff;
+}
+
+.zoom-circle-label {
+  max-width: 5.5rem;
+  font-size: var(--size-caption);
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+  opacity: 0.9;
+}
+
+/* the details: one glass group, label over value, left-aligned */
+.zoom-group {
+  margin-top: 1.5rem;
+  border-radius: 1rem;
+  background: var(--zoom-glass);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  overflow: hidden;
+}
+
+.zoom-row {
+  padding: 0.75rem 1rem;
+}
+
+.zoom-row + .zoom-row {
+  border-top: 1px solid var(--zoom-line);
+}
+
+.zoom-row span {
+  font-size: var(--size-caption);
+  font-weight: var(--weight-bold);
+  opacity: 0.7;
+}
+
+.zoom-row p {
+  margin: 0.125rem 0 0;
+  font-size: var(--size-body);
+  line-height: 1.35;
+}
+
+.zoom-section {
+  margin: 1.75rem 0 0;
+  font-size: var(--size-body);
+  font-weight: var(--weight-bold);
 }
 
 /* ---------- Apple Music touches ---------- */
@@ -2987,35 +3101,1248 @@ h1.wordmark {
   display: none;
 }
 
-@media (orientation: landscape) and (max-height: 500px) {
-  .rotate-note {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    display: grid;
-    place-content: center;
-    justify-items: center;
-    gap: 0.75rem;
-    background: var(--bg);
-    color: var(--label);
-  }
+/* set from the phone's real orientation (App.jsx), not the window's shape:
+   an open keyboard makes the window wider than tall, which isn't sideways */
+html.sideways .rotate-note {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.75rem;
+  background: var(--bg);
+  color: var(--label);
+}
 
-  .rotate-note svg {
-    animation: rotate-hint 1.6s var(--ease-out) infinite alternate;
-  }
+html.sideways .rotate-note svg {
+  animation: rotate-hint 1.6s var(--ease-out) infinite alternate;
+}
 
-  .rotate-note p {
-    margin: 0;
-    font-size: var(--size-body);
-    font-weight: var(--weight-bold);
-  }
+html.sideways .rotate-note p {
+  margin: 0;
+  font-size: var(--size-body);
+  font-weight: var(--weight-bold);
+}
 
-  body {
-    overflow: hidden;
-  }
+html.sideways body {
+  overflow: hidden;
 }
 
 @keyframes rotate-hint {
   from { transform: rotate(-90deg); }
   to { transform: rotate(0deg); }
+}
+
+/* ---------- search ---------- */
+
+.search-page {
+  position: fixed;
+  inset: 0;
+  z-index: 225;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--bg);
+  padding-top: env(safe-area-inset-top);
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.75rem 1.25rem 0.5rem;
+}
+
+.search-field {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 44px;
+  padding: 0 0.875rem;
+  border-radius: 999px;
+  background: var(--glass);
+  color: var(--label-secondary);
+}
+
+.search-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--label);
+  font: inherit;
+  font-size: var(--size-body);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.search-field input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-field input::placeholder {
+  color: var(--label-tertiary);
+}
+
+.search-bar .glass-button {
+  flex: none;
+}
+
+.search-clear {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--label-tertiary);
+  color: var(--bg);
+  cursor: pointer;
+}
+
+/* scopes: a pill glides to the one you pick */
+.search-scopes {
+  display: flex;
+  gap: 0;
+  padding: 0.25rem 1.25rem 0.75rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.search-scopes::-webkit-scrollbar {
+  display: none;
+}
+
+.scope {
+  position: relative;
+  flex: none;
+  height: 34px;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--label-secondary);
+  font: inherit;
+  font-size: var(--size-callout);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+.scope.active {
+  color: var(--bg);
+}
+
+.scope-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--label);
+}
+
+.scope-name {
+  position: relative;
+}
+
+.search-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 1.25rem calc(env(safe-area-inset-bottom) + 1.5rem);
+}
+
+.search-section {
+  margin-top: 1.25rem;
+}
+
+.search-heading {
+  margin: 0 0 0.75rem;
+  font-size: var(--size-body);
+  font-weight: var(--weight-bold);
+  color: var(--label);
+}
+
+.search-heading-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.text-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tint);
+  font: inherit;
+  font-size: var(--size-callout);
+  cursor: pointer;
+}
+
+/* recently met: faces in a row you can swipe */
+.face-row {
+  display: flex;
+  gap: 1rem;
+  margin: 0 -1.25rem;
+  padding: 0 1.25rem 0.25rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.face-row::-webkit-scrollbar {
+  display: none;
+}
+
+.face-chip {
+  display: grid;
+  justify-items: center;
+  gap: 0.375rem;
+  flex: none;
+  width: 60px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--label);
+  font: inherit;
+  font-size: var(--size-caption);
+  cursor: pointer;
+}
+
+.face-chip span:last-child {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.02em;
+}
+
+.chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.search-chip,
+.when-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 36px;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--label);
+  font: inherit;
+  font-size: var(--size-callout);
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+.search-chip:active,
+.face-chip:active,
+.result-row:active,
+.recent-row:active {
+  transform: scale(0.97);
+}
+
+.when-chip {
+  margin-top: 0.25rem;
+  background: var(--label);
+  color: var(--bg);
+}
+
+.recent-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--separator);
+  background: none;
+  color: var(--label);
+  font: inherit;
+  font-size: var(--size-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.recent-row svg {
+  color: var(--label-tertiary);
+}
+
+.search-count {
+  margin: 0.75rem 0 0.25rem;
+  font-size: var(--size-caption);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--label-secondary);
+}
+
+.result-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.625rem 0;
+  border: 0;
+  background: none;
+  color: var(--label);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.result-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.125rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--separator);
+  margin-bottom: -0.625rem;
+}
+
+.result-name {
+  font-size: var(--size-body);
+  font-weight: var(--weight-bold);
+}
+
+.result-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--label-secondary);
+  font-size: var(--size-callout);
+}
+
+.result-field {
+  font-weight: var(--weight-bold);
+  color: var(--label-tertiary);
+}
+
+.result-text mark {
+  background: none;
+  color: var(--tint);
+  font-weight: var(--weight-bold);
+}
+
+.result-when {
+  flex: none;
+  align-self: flex-start;
+  margin-top: 0.125rem;
+  color: var(--label-tertiary);
+  font-size: var(--size-caption);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- map ---------- */
+
+.people-map,
+.map-wait {
+  position: relative;
+  height: calc(100vh - 9.5rem - env(safe-area-inset-top)); /* older iPhones */
+  height: calc(100dvh - 9.5rem - env(safe-area-inset-top));
+  min-height: 320px;
+  margin: 0 -1.25rem;
+  background: var(--surface);
+}
+
+.people-map-canvas {
+  /* MapLibre's own CSS makes this position: relative, which undid inset: 0 and
+     left the map 0px tall (the blank map). A real width and height fix it. */
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.person-pin {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+  background-size: cover;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  color: #fff;
+  font: 600 12px var(--font);
+  cursor: pointer;
+}
+
+/* the map has no dark style of its own: turn the light one into a night map */
+@media (prefers-color-scheme: dark) {
+  .people-map-canvas canvas {
+    filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9);
+  }
+}
+
+.map-empty {
+  position: absolute;
+  inset: auto 1.25rem 1.25rem;
+  z-index: 500;
+  margin: 0;
+  padding: 0.875rem 1rem;
+  border-radius: 1rem;
+  background: var(--bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  color: var(--label-secondary);
+  font-size: var(--size-callout);
+  text-align: center;
+}
+
+.map-card {
+  position: absolute;
+  inset: auto 1.25rem calc(env(safe-area-inset-bottom) + 1.25rem);
+  z-index: 500;
+  display: grid;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  border: 0;
+  border-radius: 1rem;
+  background: var(--bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  color: var(--label);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.map-card span {
+  color: var(--label-secondary);
+  font-size: var(--size-callout);
+}
+
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+}
+
+/* ---------- place search: real places under the field ---------- */
+.place-options {
+  margin: 0.5rem 0 0;
+  padding: 0.25rem 0;
+  list-style: none;
+  border-radius: 1rem;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.place-options button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 52px;
+  padding: 0.5rem 1rem;
+  border: 0;
+  background: none;
+  color: var(--label-secondary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.place-options li + li button {
+  border-top: 1px solid var(--separator);
+}
+
+.place-options button:active {
+  background: color-mix(in srgb, var(--label) 6%, transparent);
+}
+
+.place-options span {
+  display: grid;
+  min-width: 0;
+}
+
+.place-options b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--label);
+  font-size: var(--size-body);
+  font-weight: var(--weight-bold);
+}
+
+.place-options small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--size-caption);
+}
+
+/* picking a place with the keyboard up: the question moves to the top, the
+   list scrolls on its own, and Continue waits until a place is picked */
+.flow.picking {
+  /* iOS slides the page up for the keyboard: keep the background solid under it */
+  box-shadow: 0 0 0 100vmax var(--bg);
+}
+
+.flow.picking .flow-stage {
+  align-items: start;
+  padding-top: 1rem;
+  padding-bottom: 0;
+}
+
+.flow.picking .flow-scanned,
+.flow.picking .question-hint,
+.flow.picking .place-status,
+.flow.picking .place-elsewhere,
+.flow.picking .suggestions,
+.flow.picking .flow-actions {
+  display: none;
+}
+
+.flow.picking .question-text {
+  font-size: var(--size-body);
+  color: var(--label-secondary);
+}
+
+.place-options {
+  max-height: min(16.5rem, 38dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---------- Install: black pill, white text (inverted in dark mode) ---------- */
+.install-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex: none;
+  height: 36px;
+  padding: 0 0.875rem 0 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--label);
+  color: var(--bg);
+  font: inherit;
+  font-size: var(--size-callout);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out), opacity 160ms var(--ease-out);
+}
+
+.install-pill:active {
+  transform: scale(0.95);
+  opacity: 0.85;
+}
+
+/* in the summary row it sits in the top-right corner, level with the numbers */
+.summary .install-pill {
+  margin-left: auto;
+  align-self: flex-start;
+  margin-top: 0.5rem;
+}
+
+/* iPhone | Android, with a pill that slides between them */
+.platform-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 16rem;
+  margin: 0.25rem auto 1.25rem;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.platform-switch button {
+  position: relative;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--label-secondary);
+  font: inherit;
+  font-size: var(--size-callout);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+.platform-switch button.active {
+  color: var(--label);
+}
+
+.platform-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.platform-name {
+  position: relative;
+}
+
+.share-glyph {
+  vertical-align: -3px;
+  color: var(--tint);
+}
+
+/* ---------- date wheels: iOS picker drum ---------- */
+.date-search {
+  padding-top: 0.25rem;
+}
+
+.wheel {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.5fr 0.7fr 1fr;
+  gap: 0.25rem;
+  height: 200px;
+  margin: 0.25rem 0 0.5rem;
+}
+
+/* the soft band behind the chosen row */
+.wheel-band {
+  position: absolute;
+  inset: 80px 0 auto;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--surface);
+  pointer-events: none;
+}
+
+.wheel-column {
+  position: relative;
+  box-sizing: border-box;
+  height: 200px;
+  padding: 80px 0;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  overflow-x: hidden;
+  touch-action: pan-y; /* the wheels only ever move up and down */
+  -webkit-mask-image: linear-gradient(transparent, #000 32%, #000 68%, transparent);
+  mask-image: linear-gradient(transparent, #000 32%, #000 68%, transparent);
+  outline: none;
+}
+
+.wheel-column::-webkit-scrollbar {
+  display: none;
+}
+
+.wheel-row {
+  height: 40px;
+  line-height: 40px;
+  padding: 0 0.75rem;
+  scroll-snap-align: center;
+  color: var(--label);
+  font-size: 1.3125rem; /* 21pt, like iOS pickers */
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  backface-visibility: hidden;
+  cursor: pointer;
+  user-select: none;
+}
+
+.wheel-column.center .wheel-row {
+  text-align: center;
+}
+
+.wheel-column.end .wheel-row {
+  text-align: right;
+}
+
+/* ---------- the web: one person in focus, threads to who else was there ---------- */
+.person-pin.focus {
+  width: 48px;
+  height: 48px;
+  font-size: 15px;
+  border-width: 3px;
+  box-shadow: 0 0 0 6px rgba(0, 113, 227, 0.25), 0 6px 16px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+}
+
+.map-card-main {
+  display: grid;
+  gap: 0.125rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--label);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.map-card-main span {
+  color: var(--label-secondary);
+  font-size: var(--size-callout);
+}
+
+.map-card-web p {
+  margin: 0 0 0.375rem;
+  color: var(--label-secondary);
+  font-size: var(--size-caption);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+}
+
+.map-card-people {
+  display: flex;
+  gap: 0.375rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.map-card-people button {
+  flex: none;
+  height: 32px;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--label);
+  font: inherit;
+  font-size: var(--size-callout);
+  cursor: pointer;
+}
+
+/* the place on an open card is a link to the map */
+.xcard-place {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+}
+
+/* ---------- your card ---------- */
+.mycard-preview {
+  width: min(78%, 300px);
+  margin: 0.5rem auto 1.5rem;
+}
+
+.mycard-actions {
+  display: grid;
+  justify-items: center;
+  gap: 0.625rem;
+}
+
+/* Apple's own "Add to Apple Wallet" look: black, white text, the Wallet mark */
+.wallet-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  width: min(100%, 300px);
+  height: 52px;
+  border: 0;
+  border-radius: 12px;
+  background: #000;
+  color: #fff;
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+@media (prefers-color-scheme: dark) {
+  .wallet-button {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  }
+}
+
+.wallet-button:active {
+  transform: scale(0.97);
+}
+
+.wallet-button:disabled,
+.mycard-share:disabled {
+  opacity: 0.4;
+}
+
+.mycard-share {
+  color: var(--label);
+  background: var(--surface);
+}
+
+.mycard-note {
+  max-width: 19rem;
+  margin: 0.25rem 0 0;
+  color: var(--label-secondary);
+  font-size: var(--size-caption);
+  text-align: center;
+}
+
+.mycard-fields {
+  display: grid;
+  margin-top: 1.75rem;
+  border-radius: 1rem;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.mycard-field {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 1rem;
+}
+
+.mycard-field + .mycard-field {
+  border-top: 1px solid var(--separator);
+}
+
+.mycard-field span {
+  color: var(--label);
+  font-size: var(--size-body);
+}
+
+.mycard-field input {
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--label);
+  font: inherit;
+  font-size: var(--size-body);
+  outline: none;
+}
+
+.mycard-field input::placeholder {
+  color: var(--placeholder);
+}
+
+/* "Show everyone": the last row of the person card, full width */
+.map-show-all {
+  height: 44px;
+  margin-top: 0.125rem;
+  border: 0;
+  border-radius: 12px;
+  background: var(--label);
+  color: var(--bg);
+  font: inherit;
+  font-size: var(--size-callout);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+.map-show-all:active {
+  transform: scale(0.97);
+}
+
+/* after showing everyone: "Back to …" floats at the bottom */
+.map-toggle {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom) + 1.25rem);
+  left: 50%;
+  z-index: 500;
+  transform: translateX(-50%);
+  height: 44px;
+  padding: 0 1.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--label);
+  color: var(--bg);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  font: inherit;
+  font-size: var(--size-callout);
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+.map-toggle:active {
+  transform: translateX(-50%) scale(0.95);
+}
+
+/* under the open card: a quiet line that says it can be tapped */
+.card-hint {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 0.875rem 0 0;
+  text-align: center;
+  color: var(--label-tertiary);
+  font-size: var(--size-caption);
+  font-weight: 500;
+  pointer-events: none;
+}
+
+/* "Remind": which calendar, as an iOS action sheet */
+.zoom-chooser-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 0.75rem calc(env(safe-area-inset-bottom) + 0.75rem);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.zoom-chooser {
+  display: grid;
+  width: min(100%, 26rem);
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--bg);
+  color: var(--label);
+}
+
+.zoom-chooser-title {
+  display: grid;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--separator);
+  color: var(--label-secondary);
+  font-size: var(--size-caption);
+  font-weight: var(--weight-bold);
+  text-align: center;
+}
+
+.zoom-chooser-title span {
+  font-weight: var(--weight-text);
+}
+
+.zoom-chooser button {
+  height: 56px;
+  border: 0;
+  border-bottom: 1px solid var(--separator);
+  background: none;
+  color: var(--tint);
+  font: inherit;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.zoom-chooser button:active {
+  background: var(--surface);
+}
+
+.zoom-chooser button.cancel {
+  border-bottom: 0;
+  border-top: 8px solid var(--grouped-bg);
+  font-weight: var(--weight-bold);
+}
+
+/* ---------- "When should you reach out?": date, wheels and slider together ---------- */
+.reach-block .slider-value.big {
+  margin-bottom: 0.25rem;
+}
+
+.reach-wheel {
+  transition: opacity 0.25s var(--ease-out);
+}
+
+.reach-wheel.off {
+  opacity: 0.35;
+}
+
+.reach-block .slider-ends span:nth-child(2) {
+  color: var(--label);
+  font-weight: var(--weight-bold);
+}
+
+.remind-with {
+  margin-top: 1.25rem;
+  text-align: center;
+}
+
+.remind-with p {
+  margin: 0 0 0.5rem;
+  color: var(--label-secondary);
+  font-size: var(--size-caption);
+  font-weight: var(--weight-bold);
+}
+
+.remind-options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.375rem;
+}
+
+.remind-option {
+  height: 34px;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--label);
+  font: inherit;
+  font-size: var(--size-callout);
+  cursor: pointer;
+  transition: background 0.2s var(--ease-out), color 0.2s var(--ease-out);
+}
+
+.remind-option.active {
+  background: var(--label);
+  color: var(--bg);
+}
+
+.remind-with small {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--label-tertiary);
+  font-size: var(--size-caption);
+}
+
+/* this step holds the most, so it sits higher and its wheels show three rows */
+.flow-stage:has(.reach-block) {
+  align-items: start;
+  padding-top: 2dvh;
+  padding-bottom: 0;
+  overflow-y: auto;
+}
+
+.reach-wheel .wheel,
+.reach-wheel .wheel-column {
+  height: 120px;
+}
+
+.reach-wheel .wheel-column {
+  padding: 40px 0;
+}
+
+.reach-wheel .wheel-band {
+  inset: 40px 0 auto;
+}
+
+.reach-block .slider {
+  margin-top: 0.75rem;
+}
+
+.slider-block.reach-block {
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.reach-block .reach-wheel,
+.reach-block .remind-with {
+  justify-self: stretch;
+}
+
+.reach-block .remind-with {
+  margin-top: 0.75rem;
+}
+
+.flow-stage:has(.reach-block) .question-text {
+  margin-bottom: 0.5rem;
+  font-size: 1.625rem;
+}
+
+.flow-stage:has(.reach-block) .question-hint {
+  display: none;
+}
+
+
+/* ---------- someone's shared card: rises slowly out of its own glow ---------- */
+.shared {
+  position: fixed;
+  inset: 0;
+  z-index: 230;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+}
+
+.shared-glow {
+  position: absolute;
+  inset: -25%;
+  background-size: cover;
+  filter: blur(70px) saturate(1.3);
+}
+
+.shared-top {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(env(safe-area-inset-top) + 0.75rem) 1.25rem 0;
+}
+
+.shared-mark {
+  font-size: 1.375rem;
+  font-weight: 850;
+  letter-spacing: -0.06em;
+}
+
+.shared-intro {
+  height: 34px;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  color: #fff;
+  font: inherit;
+  font-size: var(--size-callout);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+
+.shared-stage {
+  position: relative;
+  flex: 1;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 1.25rem;
+  padding: 0 1.5rem;
+}
+
+.shared-kicker {
+  margin: 0;
+  font-size: var(--size-body);
+  font-weight: var(--weight-bold);
+  opacity: 0.85;
+}
+
+.shared-card {
+  width: min(78vw, 20rem);
+}
+
+.shared-card .xcard {
+  box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.6);
+}
+
+.shared-bottom {
+  position: relative;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0 1.5rem calc(env(safe-area-inset-bottom) + 0.75rem);
+}
+
+.shared-bottom .primary-button {
+  background: #fff;
+  color: #000;
+}
+
+.shared-bottom .flow-skip {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* ---------- the intro film: a graphic on the screen, not a video player ---------- */
+.intro-film {
+  position: fixed;
+  inset: 0;
+  z-index: 215; /* over the deck, under sheets, so Install's steps open on top of it */
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #000;
+}
+
+.intro-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* fills any phone, like a full-screen graphic */
+  pointer-events: none; /* no tap-to-pause, no player chrome */
+}
+
+/* on a wide screen, keep it phone-shaped in the middle */
+@media (min-width: 720px) {
+  .intro-video {
+    width: auto;
+    height: 100%;
+    aspect-ratio: 9 / 16;
+    object-fit: contain;
+  }
+}
+
+.intro-video::-webkit-media-controls,
+.intro-video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+}
+
+.intro-skip {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 0.75rem);
+  right: 1rem;
+  z-index: 1;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.4); /* there if you want it, easy to ignore */
+  font: inherit;
+  font-size: var(--size-callout);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.intro-skip:active {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* + to add someone, always on top of the film */
+.intro-add {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom) + 1.5rem);
+  left: 50%;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-left: -32px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #000;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 0 6px rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+}
+
+.intro-fallback {
+  margin: 0;
+  color: #fff;
+  font-size: 6rem;
+  font-weight: 900;
+  letter-spacing: -0.06em;
+}
+
+/* Install on the film: a white pill, top left, across from Skip */
+.intro-install {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 0.75rem);
+  left: 1rem;
+  z-index: 1;
+  background: #fff;
+  color: #000;
+}
+
+/* after Skip, an empty deck is one button in the middle of the screen */
+.empty-start {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
 }

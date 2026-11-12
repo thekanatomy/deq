@@ -6,18 +6,21 @@ import AddFlow from './AddFlow'
 import CardForm from './CardForm.jsx'
 import DeqCard from './DeqCard'
 import DetailsSheet from './DetailsSheet'
-import { CategoriesIcon, CloseIcon, MoreIcon, PlusIcon } from './icons.jsx'
+import { CategoriesIcon, CloseIcon, MoreIcon, PlusIcon, SearchIcon } from './icons.jsx'
 import MenuSheet from './MenuSheet.jsx'
 import CategoriesSheet from './CategoriesSheet'
 import Insights from './Insights'
+import Search from './Search'
+import MyCard from './MyCard'
+import SharedCard from './SharedCard'
+import { readCard } from './share'
 import { isWaiting } from './filters'
 import { filtersFor } from './filters'
 import SaveSheet from './SaveSheet'
-import Welcome from './Welcome'
 import Intro from './Intro'
 import InAppGate from './InAppGate'
 import HomeScreenSheet from './HomeScreenSheet'
-import { inAppBrowser, isStandalone, recall, remember } from './browser'
+import { inAppBrowser, isAndroid, isStandalone, recall, remember } from './browser'
 import ZoomView from './ZoomView.jsx'
 import { meshImage } from './brands'
 import { db, visible } from './db'
@@ -87,11 +90,28 @@ export default function App() {
   // opened inside Instagram/TikTok/LinkedIn…: ask to move to the real browser first
   const [gateApp, setGateApp] = useState(() => (recall('deq-stay-in-app') ? null : inAppBrowser()))
   // the six-second story, once, for someone new
-  const [introSeen, setIntroSeen] = useState(() => Boolean(recall('deq-intro-seen', true)))
   // from the 5th person, after signing in (or "Not now"): put deq on the Home Screen
   const [homeTip, setHomeTip] = useState(false)
   const pendingHome = useRef(false)
   const [installPrompt, setInstallPrompt] = useState(null)
+  // the Install pill: shown in a browser tab, gone once deq is on the Home Screen
+  const [installOpen, setInstallOpen] = useState(false)
+  const [installed, setInstalled] = useState(() => isStandalone())
+  useEffect(() => {
+    const done = () => setInstalled(true)
+    window.addEventListener('appinstalled', done)
+    return () => window.removeEventListener('appinstalled', done)
+  }, [])
+  // Android: the pill only shows once Chrome allows installing, and a tap opens
+  // Chrome's own install prompt straight away. iPhone: the sheet with the steps.
+  const canInstall = !installed && (!isAndroid || Boolean(installPrompt))
+  async function startInstall() {
+    if (!isAndroid || !installPrompt) return setInstallOpen(true)
+    installPrompt.prompt()
+    const choice = await installPrompt.userChoice.catch(() => null)
+    setInstallPrompt(null) // each prompt can only be used once
+    if (choice?.outcome === 'accepted') setInstalled(true)
+  }
   // Signed in from the 5th-person sheet (or came back from Google): the Home Screen is next.
   const signedIn = Boolean(account.user)
   const deckSize = people?.length ?? 0
@@ -112,6 +132,26 @@ export default function App() {
   // deck · scan (camera) · verify (check what the scan found) · form (type it in) · edit
   const [view, setView] = useState('deck')
   const [draft, setDraft] = useState({})
+  // opened from someone's Deq card (their Wallet pass QR or link): add them straight away
+  useEffect(() => {
+    const card = readCard(window.location.hash)
+    if (!card) return
+    history.replaceState(null, '', window.location.pathname + window.location.search)
+    setIncoming(card)
+  }, [])
+  // someone's shared card, shown before adding; "What's deq?" replays the intro
+  const [incoming, setIncoming] = useState(null)
+  const [watchIntro, setWatchIntro] = useState(false)
+  // Skip on the film hides it for this visit; it comes back next time while the deck is empty
+  const [skippedFilm, setSkippedFilm] = useState(false)
+  const [myCardOpen, setMyCardOpen] = useState(false)
+  // "Tap the card for more" shows until you've opened the details three times
+  const [showZoomHint, setShowZoomHint] = useState(() => Number(recall('deq-zoom-used', true) ?? 0) < 3)
+  function learnedZoom() {
+    const used = Number(recall('deq-zoom-used', true) ?? 0) + 1
+    remember('deq-zoom-used', String(used), true)
+    if (used >= 3) setShowZoomHint(false)
+  }
   const [openId, setOpenId] = useState(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [addedId, setAddedId] = useState(null)
@@ -144,6 +184,13 @@ export default function App() {
   const [filterId, setFilterId] = useState('all')
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [insightsOpen, setInsightsOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false) // false | { scope, focusId }
+  // a card's place was tapped: open search on the map, centred on that person
+  useEffect(() => {
+    const show = event => setSearchOpen({ scope: 'Map', focusId: event.detail })
+    window.addEventListener('deq:show-on-map', show)
+    return () => window.removeEventListener('deq:show-on-map', show)
+  }, [])
   const filters = filtersFor(everyone)
   const filter = filters.find(option => option.id === filterId) ?? filters[0]
   const list = filter.id === 'all' ? everyone : everyone.filter(filter.test)
@@ -167,6 +214,10 @@ export default function App() {
       : (list.length - 1) * strip + cardHeight
 
   const recentPlaces = [...new Set(everyone.map(person => person.place).filter(Boolean))].slice(0, 4)
+  // places you've saved before, with where they are, so picking one again keeps the map pin
+  const placeCoords = Object.fromEntries(
+    everyone.filter(person => person.place && Number.isFinite(person.lat)).map(person => [person.place, { lat: person.lat, lng: person.lng }]),
+  )
   const open = isOpen ? list[openIndex] : null
   const added = list.find(person => person.id === addedId)
   const openLook = open ? { backgroundImage: meshImage(open.company) } : null
@@ -193,7 +244,8 @@ export default function App() {
     setView('form')
   }
 
-  async function addPerson(fields) {
+  // remindWith only steers the calendar reminder in the add flow; it isn't stored
+  async function addPerson({ remindWith: _remindWith, ...fields }) {
     const now = Date.now()
     const id = await db.cards.add({
       name: '',
@@ -210,6 +262,7 @@ export default function App() {
     setOpenId(null)
     setAddedId(id)
     setView('deck')
+
     // At 5 people, ask once to sign in so they're backed up (again 10 people later if you said not now).
     const count = await db.cards.filter(visible).count()
     // From the 5th person: first "don't lose these people" (sign in), then the Home Screen.
@@ -246,6 +299,23 @@ export default function App() {
       // the share sheet was closed
     }
   }
+
+  // portrait only, judged by how the phone is actually held, so the keyboard can't trigger it
+  useEffect(() => {
+    const check = () => {
+      const type = screen.orientation?.type
+      const turned = type ? type.startsWith('landscape') : Math.abs(window.orientation ?? 0) === 90
+      const phone = Math.min(screen.width, screen.height) < 500
+      document.documentElement.classList.toggle('sideways', turned && phone)
+    }
+    check()
+    screen.orientation?.addEventListener?.('change', check)
+    window.addEventListener('orientationchange', check)
+    return () => {
+      screen.orientation?.removeEventListener?.('change', check)
+      window.removeEventListener('orientationchange', check)
+    }
+  }, [])
 
   return (
     <MotionConfig reducedMotion="user">
@@ -289,7 +359,7 @@ export default function App() {
                 </motion.button>
               ) : (
                 <motion.h1 key="title" className="top-name" {...POP}>
-                  {empty ? '' : filter.label ?? (owner ? `${owner}’s deq` : 'My deq')}
+                  {empty ? '' : filter.label ?? (owner ? `${owner}’s deq` : 'deq')}
                 </motion.h1>
               )}
             </AnimatePresence>
@@ -311,6 +381,12 @@ export default function App() {
                       <PlusIcon />
                     </button>
                   )}
+                  {!empty && (
+                    <button className="glass-button" aria-label="Search" onClick={() => setSearchOpen({ scope: 'All' })}>
+                      <SearchIcon />
+                    </button>
+                  )}
+                  {empty && canInstall && <InstallPill onClick={startInstall} />}
                   <div className="glass-pair">
                     {!empty && (
                       <button
@@ -338,8 +414,7 @@ export default function App() {
             transition={SETTLE}
             style={{ transformOrigin: 'top left' }}
           >
-            {empty && <h1 className="wordmark">deq</h1>}
-            {list.length > 0 && filter.id === 'all' && <Summary people={list} onOpen={() => setInsightsOpen(true)} />}
+            {list.length > 0 && filter.id === 'all' && <Summary people={list} onOpen={() => setInsightsOpen(true)} onInstall={canInstall ? startInstall : null} />}
             {filter.id === 'all' && <Nudge people={list} onOpen={openCard} />}
             {filter.id !== 'all' && (
               <button className="filter-chip" onClick={() => setFilterId('all')}>
@@ -380,7 +455,10 @@ export default function App() {
                 onClick={event => {
                   if (selected) {
                     // tapping the card itself (not one of its buttons) lifts it into the zoom view
-                    if (!event.target.closest('button, a, input, form')) setZoomed(true)
+                    if (!event.target.closest('button, a, input, form')) {
+                      setZoomed(true)
+                      learnedZoom()
+                    }
                     return
                   }
                   if (isOpen) closeCard()
@@ -410,17 +488,35 @@ export default function App() {
                     />
                   </motion.div>
                 )}
+                {/* a quiet hint under the open card, until you've used it a few times */}
+                <AnimatePresence>
+                  {selected && !zoomed && showZoomHint && (
+                    <motion.p
+                      className="card-hint"
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.4 } }}
+                      exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                    >
+                      Tap the card for more about {person.name.split(' ')[0]}
+                    </motion.p>
+                  )}
+                </AnimatePresence>
               </motion.div>
             )
           })}
         </motion.section>
 
-        {empty && (
-          <Welcome
-            onAdd={() => setView('scan')}
-            onSignIn={accountsEnabled && !account.user ? () => setAskToSave('signin') : null}
-          />
+        {empty && skippedFilm && (
+          <div className="empty-start">
+            <button className="welcome-add" onClick={() => setView('scan')}>
+              <span className="welcome-plus">
+                <PlusIcon size={30} />
+              </span>
+              Add your first person
+            </button>
+          </div>
         )}
+
       </div>
 
       <AnimatePresence>
@@ -437,6 +533,7 @@ export default function App() {
             subtitle={`Update what you know about ${open.name.split(' ')[0]}.`}
             submitLabel="Save"
             recentPlaces={recentPlaces}
+            placeCoords={placeCoords}
             onSave={saveEdit}
             onClose={() => setView('deck')}
           />
@@ -446,6 +543,7 @@ export default function App() {
             key="form"
             initial={draft}
             recentPlaces={recentPlaces}
+            placeCoords={placeCoords}
             onSave={addPerson}
             onClose={() => {
               setDraft({})
@@ -479,7 +577,26 @@ export default function App() {
               setOwner(name)
               saveOwner(name)
             }}
+            onMyCard={() => {
+              setMenuOpen(false)
+              setMyCardOpen(true)
+            }}
             onClose={() => setMenuOpen(false)}
+          />
+        )}
+        {myCardOpen && <MyCard key="mycard" owner={owner} onClose={() => setMyCardOpen(false)} />}
+        {searchOpen && (
+          <Search
+            key="search"
+            people={everyone}
+            startScope={searchOpen.scope}
+            focusId={searchOpen.focusId}
+            onOpenPerson={id => {
+              setSearchOpen(false)
+              setFilterId('all')
+              openCard(id)
+            }}
+            onClose={() => setSearchOpen(false)}
           />
         )}
         {insightsOpen && (
@@ -508,6 +625,14 @@ export default function App() {
             onClose={() => setCategoriesOpen(false)}
           />
         )}
+        {installOpen && (
+          <HomeScreenSheet
+            key="install"
+            installPrompt={installPrompt}
+            onInstalled={() => setInstalled(true)}
+            onClose={() => setInstallOpen(false)}
+          />
+        )}
         {homeTip && (
           <HomeScreenSheet
             key="home-tip"
@@ -518,7 +643,36 @@ export default function App() {
             }}
           />
         )}
-        {empty && !introSeen && !gateApp && <Intro key="intro" onDone={() => setIntroSeen(true)} />}
+        {incoming && !watchIntro && (
+          <SharedCard
+            key="shared"
+            person={incoming}
+            onIntro={() => setWatchIntro(true)}
+            onAdd={() => {
+              setDraft(incoming)
+              setIncoming(null)
+              setView('form')
+            }}
+            onClose={() => setIncoming(null)}
+          />
+        )}
+        {/* an empty deq is the film: it loops behind the + until the first person is added */}
+        {((empty && view === 'deck' && !gateApp && !incoming && !skippedFilm) || watchIntro) && (
+          <Intro
+            key="intro"
+            onDone={() => (watchIntro ? setWatchIntro(false) : setSkippedFilm(true))}
+            onInstall={canInstall && !watchIntro ? startInstall : null}
+            // + on the film: add the person whose card brought you here, or scan someone new
+            onAdd={() => {
+              setWatchIntro(false)
+              if (incoming) {
+                setDraft(incoming)
+                setIncoming(null)
+                setView('form')
+              } else setView('scan')
+            }}
+          />
+        )}
         {gateApp && <InAppGate key="gate" app={gateApp} onContinue={() => setGateApp(null)} />}
         {zoomed && open && <ZoomView key="zoom" person={open} onClose={() => setZoomed(false)} />}
         {askToSave && !account.user && (
@@ -546,7 +700,7 @@ export default function App() {
 
 
 // Two numbers you can read at a glance: who you met this month, who's waiting on you.
-function Summary({ people, onOpen }) {
+function Summary({ people, onOpen, onInstall }) {
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
   const metThisMonth = people.filter(person => (person.metAt ?? person.lastContacted) >= monthStart).length
@@ -568,7 +722,20 @@ function Summary({ people, onOpen }) {
           {waiting === 0 ? 'all caught up' : 'waiting on you'} <StatChevron />
         </span>
       </button>
+      {onInstall && <InstallPill onClick={onInstall} />}
     </div>
+  )
+}
+
+// Black pill, white text (inverted in dark mode): the one way to install deq.
+function InstallPill({ onClick }) {
+  return (
+    <button className="install-pill" onClick={onClick}>
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19.5h14" />
+      </svg>
+      Install
+    </button>
   )
 }
 
@@ -625,7 +792,7 @@ function laterSaveAsk(count) {
   }
 }
 
-// Until there's an account, the title uses the name you set in the menu (or "My deq").
+// Until there's an account, the title uses the name you set in the menu (or just "deq").
 function readOwner() {
   try {
     return localStorage.getItem('deq-owner') ?? ''

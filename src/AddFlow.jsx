@@ -6,6 +6,9 @@ import { detectPlace } from './location'
 import { parseScan } from './scan'
 import { readPhoto } from './vision'
 import { cropFace } from './face'
+import { searchPlaces } from './places'
+import DateWheel from './Wheel.jsx'
+import { openReminder } from './calendar'
 
 // Adding someone in a few taps, one question at a time. Names come from the QR or a
 // pasted LinkedIn link, the place comes from your location, two sliders replace typing,
@@ -22,6 +25,36 @@ const FOLLOW_UPS = [
   { days: null, label: 'No reminder' },
 ]
 
+const DAY = 24 * 60 * 60 * 1000
+
+function lastCalendar() {
+  try {
+    // only Google Calendar is offered here for now
+    return localStorage.getItem('deq-remind-with') === 'google' ? 'google' : null
+  } catch {
+    return null
+  }
+}
+
+function rememberCalendar(id) {
+  try {
+    if (id) localStorage.setItem('deq-remind-with', id)
+    else localStorage.removeItem('deq-remind-with')
+  } catch {
+    // not remembered: harmless
+  }
+}
+
+// the slider stop closest to a number of days
+function nearestFollowUp(days) {
+  if (!days) return FOLLOW_UPS.length - 1
+  let best = 0
+  FOLLOW_UPS.forEach((option, index) => {
+    if (option.days && Math.abs(option.days - days) < Math.abs(FOLLOW_UPS[best].days - days)) best = index
+  })
+  return best
+}
+
 const SOURCES = { card: 'their card', badge: 'their badge', screen: 'the screen', person: 'the photo', other: 'the photo' }
 
 const STEPS = [
@@ -34,7 +67,7 @@ const STEPS = [
   { key: 'note', question: 'What stood out?', hint: 'Something to remember them by.' },
 ]
 
-export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
+export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, onClose }) {
   const [fields, setFields] = useState({
     name: '',
     role: '',
@@ -45,12 +78,13 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
     note: '',
     vibe: 3,
     followUpDays: 7,
+    remindWith: lastCalendar(), // add it to this calendar once the card is saved
     ...initial,
   })
   const skipped = { name: Boolean(initial.name), work: Boolean(initial.company) }
   const [step, setStep] = useState(() => STEPS.findIndex(s => !skipped[s.key]))
   const [direction, setDirection] = useState(1)
-  const [locating, setLocating] = useState(initial.place ? 'idle' : 'finding') // idle | finding | found | failed | elsewhere
+  const [locating, setLocating] = useState(initial.place ? 'idle' : 'finding') // idle | finding | found | failed | blocked | elsewhere
   const needsReading = Boolean(initial.scanImage) && !(initial.name && initial.company)
   const [reading, setReading] = useState(needsReading ? 'reading' : 'idle') // idle | reading | done | read | failed | busy
   const [readFrom, setReadFrom] = useState('')
@@ -124,6 +158,31 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
   }, [])
 
 
+  // Typing a place: a short list of real places under the field. Picking one
+  // saves its coordinates too, so the person lands on the map.
+  const [placeTyped, setPlaceTyped] = useState(false)
+  const [placeOptions, setPlaceOptions] = useState([])
+  useEffect(() => {
+    const text = fields.place.trim()
+    if (!placeTyped || text.length < 3) return setPlaceOptions([])
+    const controller = new AbortController()
+    const timer = setTimeout(() => {
+      searchPlaces(text, foundRef.current, controller.signal)
+        .then(setPlaceOptions)
+        .catch(() => {})
+    }, 280)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [fields.place, placeTyped])
+
+  function pickPlace(option) {
+    setFields(previous => ({ ...previous, place: option.place, lat: option.lat, lng: option.lng }))
+    setPlaceTyped(false)
+    setPlaceOptions([])
+  }
+
   // while the photo is read, typing waits: the answers are about to fill in
   const waiting = reading === 'reading' || reading === 'done'
   useEffect(() => {
@@ -146,7 +205,8 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
         setFields(previous => (previous.place ? previous : { ...previous, ...found }))
         setLocating(found.place ? 'found' : 'failed')
       })
-      .catch(() => !cancelled && setLocating('failed'))
+      // code 1: location is blocked for this site, which needs a different fix than "not found"
+      .catch(error => !cancelled && setLocating(error?.code === 1 ? 'blocked' : 'failed'))
     return () => {
       cancelled = true
     }
@@ -174,6 +234,9 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
       Object.entries(kept).map(([key, entry]) => [key, typeof entry === 'string' ? entry.trim() : entry]),
     )
     onSave(clean)
+    // Google Calendar opens right here, inside the tap on Add, after the save has
+    // started: phones only let a tap open another app, and a wait would lose it.
+    if (clean.remindWith && clean.followUpDays) openReminder({ ...clean, lastContacted: Date.now() }, clean.remindWith)
   }
 
   function go(to) {
@@ -199,11 +262,16 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
     }
   }
 
-  const followIndex = Math.max(0, FOLLOW_UPS.findIndex(option => option.days === fields.followUpDays))
+  const followIndex = nearestFollowUp(fields.followUpDays)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const reachOn = new Date(today.getTime() + (fields.followUpDays ?? 7) * DAY)
+  const wheelYears = [today.getFullYear(), today.getFullYear() + 1]
 
   return (
     <motion.div
-      className="flow"
+      // picking a place: the list takes the room, everything else steps aside for the keyboard
+      className={placeOptions.length > 0 && current.key === 'place' ? 'flow picking' : 'flow'}
       initial={{ y: '100%' }}
       animate={{ y: 0 }}
       exit={{ y: '100%', transition: { type: 'spring', bounce: 0, duration: 0.3 } }}
@@ -303,6 +371,7 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
                   <PinIcon />
                   {locating === 'finding' && !fields.place ? 'Finding where you are…' : null}
                   {locating === 'failed' && !fields.place ? 'Couldn’t find your location' : null}
+                  {locating === 'blocked' && !fields.place ? 'Location is off for deq. Type the place, or allow it in your browser’s site settings.' : null}
                   {locating === 'elsewhere' && !fields.place ? 'Where did you meet?' : null}
                   {fields.place && (locating === 'found' ? 'Found you here' : 'Here')}
                 </div>
@@ -312,9 +381,42 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
                   placeholder={locating === 'elsewhere' ? 'Career Fair, Hayden Library…' : 'Memorial Union'}
                   enterKeyHint="next"
                   value={fields.place}
-                  onChange={event => set('place', event.target.value)}
+                  onChange={event => {
+                    const place = event.target.value
+                    // a typed place has no coordinates until one is picked from the list
+                    setFields(previous => ({ ...previous, place, lat: undefined, lng: undefined }))
+                    setPlaceTyped(true)
+                  }}
                   onKeyDown={onKeyDown}
+                  autoComplete="off"
+                  aria-autocomplete="list"
+                  aria-controls="place-options"
                 />
+                <AnimatePresence>
+                  {placeOptions.length > 0 && (
+                    <motion.ul
+                      id="place-options"
+                      className="place-options"
+                      role="listbox"
+                      initial={{ opacity: 0, y: -6, filter: 'blur(4px)' }}
+                      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                      exit={{ opacity: 0, y: -4, transition: { duration: 0.15 } }}
+                      transition={{ type: 'spring', bounce: 0, duration: 0.35 }}
+                    >
+                      {placeOptions.map(option => (
+                        <li key={option.place} role="option" aria-selected="false">
+                          <button onMouseDown={event => event.preventDefault()} onClick={() => pickPlace(option)}>
+                            <PinIcon />
+                            <span>
+                              <b>{option.name}</b>
+                              {option.detail && <small>{option.detail}</small>}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </motion.ul>
+                  )}
+                </AnimatePresence>
                 {/* the phone knows where you are now, not always where you met.
                     One button that stays put and flips, so tapping it never loses the keyboard. */}
                 {(locating === 'found' || locating === 'elsewhere') && foundRef.current && (
@@ -342,7 +444,7 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
                     {recentPlaces
                       .filter(place => place !== fields.place)
                       .map(place => (
-                        <button key={place} className="suggestion" onClick={() => set('place', place)}>
+                        <button key={place} className="suggestion" onClick={() => pickPlace({ place, ...placeCoords?.[place] })}>
                           {place}
                         </button>
                       ))}
@@ -376,10 +478,23 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
             )}
 
             {current.key === 'followUp' && (
-              <div className="slider-block">
+              <div className="slider-block reach-block">
+                {/* the date, the wheels and the slider all move together */}
                 <p className="slider-value big">
-                  {FOLLOW_UPS[followIndex].days ? `Remind me ${FOLLOW_UPS[followIndex].label}` : 'No reminder'}
+                  {fields.followUpDays
+                    ? reachOn.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long' })
+                    : 'No reminder'}
                 </p>
+                <div className={fields.followUpDays ? 'reach-wheel' : 'reach-wheel off'}>
+                  <DateWheel
+                    value={reachOn}
+                    years={wheelYears}
+                    onChange={date => {
+                      const days = Math.round((date.getTime() - today.getTime()) / DAY)
+                      set('followUpDays', Math.max(1, days))
+                    }}
+                  />
+                </div>
                 <input
                   ref={inputRef}
                   className="slider"
@@ -395,8 +510,29 @@ export default function AddFlow({ initial, recentPlaces, onSave, onClose }) {
                 />
                 <div className="slider-ends">
                   <span>Soon</span>
+                  <span>{FOLLOW_UPS[followIndex].days ? FOLLOW_UPS[followIndex].label : 'No reminder'}</span>
                   <span>Later</span>
                 </div>
+                {fields.followUpDays && (
+                  <div className="remind-with">
+                    <p>Remind me in</p>
+                    <div className="remind-options">
+                      {[{ id: null, short: 'Just deq' }, { id: 'google', short: 'Google Calendar' }].map(option => (
+                        <button
+                          key={option.id ?? 'none'}
+                          className={fields.remindWith === option.id ? 'remind-option active' : 'remind-option'}
+                          onClick={() => {
+                            set('remindWith', option.id)
+                            rememberCalendar(option.id)
+                          }}
+                        >
+                          {option.short}
+                        </button>
+                      ))}
+                    </div>
+                    {fields.remindWith && <small>Opens when you add {fields.name.split(' ')[0] || 'them'} to your deq.</small>}
+                  </div>
+                )}
               </div>
             )}
 
@@ -490,7 +626,7 @@ function ReadingRing({ done }) {
 
 // A face whose smile follows the slider: flat at "quick hello", wide at "stay in touch".
 // Apple's system colours, red to green: how it went, at a glance.
-const VIBE_COLOURS = ['#FF3B30', '#FF9500', '#FFCC00', '#A3D94B', '#34C759']
+const VIBE_COLOURS = ['#FF3B30', '#FF9500', '#F2B600', '#A3D94B', '#34C759']
 
 function Face({ value, colour }) {
   const curve = 13 + (value - 3) * 3.2 // control point of the mouth

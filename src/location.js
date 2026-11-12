@@ -2,15 +2,23 @@
 // The phone gives coordinates; OpenStreetMap's free lookup turns them into a name.
 // Only the coordinates are sent, once per new person, and only after the phone asks you.
 
-function position() {
+function ask(options) {
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) return reject(new Error('no location on this device'))
-    navigator.geolocation.getCurrentPosition(
-      result => resolve(result.coords),
-      reject,
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 },
-    )
+    if (!navigator.geolocation) return reject(Object.assign(new Error('no location on this device'), { code: 2 }))
+    navigator.geolocation.getCurrentPosition(result => resolve(result.coords), reject, options)
   })
+}
+
+// Quick first: a rough fix from Wi-Fi and cell towers comes back in a second or two
+// (Android's GPS-first request can take longer than we'd wait indoors). Only if
+// that fails, ask once more for a precise fix with more time.
+async function position() {
+  try {
+    return await ask({ enableHighAccuracy: false, timeout: 7000, maximumAge: 5 * 60 * 1000 })
+  } catch (error) {
+    if (error.code === 1) throw error // blocked: asking again won't help
+    return ask({ enableHighAccuracy: true, timeout: 15000, maximumAge: 0 })
+  }
 }
 
 function nameFrom(result) {

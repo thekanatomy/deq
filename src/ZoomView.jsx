@@ -1,31 +1,46 @@
-import { motion, useMotionValue, useSpring, useTransform } from 'motion/react'
-import { useEffect } from 'react'
+import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from 'motion/react'
+import { useEffect, useState } from 'react'
+import { CALENDARS, followUpWindow, openReminder } from './calendar'
 import { brandStyle } from './brands'
+import { db } from './db'
 import DeqCard from './DeqCard'
+import { CloseIcon } from './icons'
+import { companyOf, roleOf } from './text'
 
 const DAY = 24 * 60 * 60 * 1000
 const SPRING = { type: 'spring', bounce: 0, duration: 0.5 }
+const EASE = [0.32, 0.72, 0, 1]
 
-function formatDate(timestamp) {
-  return new Date(timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+function linkedinUrl(value) {
+  const path = value.trim().match(/linkedin\.com\/((?:in|company)\/[^/?#\s]+)/i)
+  return path ? `https://www.linkedin.com/${path[1]}` : `https://www.linkedin.com/in/${value.trim().replace(/^@/, '')}`
 }
 
-// The card lifted out of the deck: it flies up from where it sat (shared layoutId),
-// the whole screen glows in the brand's colour, and the card tilts under your finger.
+function followUpText(person) {
+  return [
+    person.note && `Stood out: ${person.note}`,
+    person.place && `Met at ${person.place}`,
+    person.linkedin && `LinkedIn: ${linkedinUrl(person.linkedin)}`,
+    person.email && `Email: ${person.email}`,
+    'From deq.one',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+// The person, up close. The card flies up from the deck; under it, their details
+// (left-aligned, like Apple's contact cards) and round actions to stay in touch.
 export default function ZoomView({ person, onClose }) {
   const brand = brandStyle(person.company)
   const glow = brand ?? { '--card-background': 'var(--deq-gradient)', '--card-ink': '#fff' }
-  // Darken the glow under white text, lighten it under dark text, so the card stands
-  // out from its own colour and the caption stays readable.
   const lightText = glow['--card-ink'].startsWith('#fff') || glow['--card-ink'].startsWith('rgba(255')
   const base = lightText ? '#000' : '#fff'
+  const first = person.name.split(' ')[0]
   const days = Math.floor((Date.now() - person.lastContacted) / DAY)
-  const metAt = person.metAt ?? person.lastContacted
-  const reminder = person.followUpDays
-    ? formatDate((person.lastContacted ?? metAt) + person.followUpDays * DAY).replace(/^/, 'on ')
-    : null
+  const due = followUpWindow(person)
+  const [spoke, setSpoke] = useState(false)
 
-  // tilt follows the pointer, softened by a spring so it never feels twitchy
+  // tilt follows the pointer on the card only, softened by a spring
   const pointerX = useMotionValue(0)
   const pointerY = useMotionValue(0)
   const rotateY = useSpring(useTransform(pointerX, [-0.5, 0.5], [-10, 10]), { stiffness: 180, damping: 22 })
@@ -37,24 +52,94 @@ export default function ZoomView({ person, onClose }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  function onPointerMove(event) {
-    const rect = event.currentTarget.getBoundingClientRect()
-    pointerX.set((event.clientX - rect.left) / rect.width - 0.5)
-    pointerY.set((event.clientY - rect.top) / rect.height - 0.5)
+  // ---------- actions ----------
+
+  // Remind: pick which calendar, then it opens straight into a new event
+  const [choosing, setChoosing] = useState(false)
+  const calendars = CALENDARS.map(calendar => ({ ...calendar, run: () => openReminder(person, calendar.id) }))
+
+  function saveContact() {
+    // a vCard: iPhone shows "Create New Contact" with everything filled in
+    const [given, ...rest] = person.name.split(' ')
+    const vcf = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      `N:${rest.join(' ')};${given};;;`,
+      `FN:${person.name}`,
+      companyOf(person) && `ORG:${person.company}`,
+      roleOf(person) && `TITLE:${person.role}`,
+      person.email && `EMAIL:${person.email}`,
+      person.linkedin && `URL:${linkedinUrl(person.linkedin)}`,
+      `NOTE:${followUpText(person).replace(/\n/g, '\\n')}`,
+      'END:VCARD',
+    ]
+      .filter(Boolean)
+      .join('\r\n')
+    window.location.href = `data:text/vcard;charset=utf-8,${encodeURIComponent(vcf)}`
   }
 
-  function resetTilt() {
-    pointerX.set(0)
-    pointerY.set(0)
+  async function share() {
+    const text = [person.name, [roleOf(person), companyOf(person)].filter(Boolean).join(' · '), person.linkedin && linkedinUrl(person.linkedin), person.email]
+      .filter(Boolean)
+      .join('\n')
+    try {
+      if (navigator.share) await navigator.share({ title: person.name, text })
+      else await navigator.clipboard.writeText(text)
+    } catch {
+      // closed the share sheet
+    }
   }
+
+  async function spokeToday() {
+    await db.cards.update(person.id, { lastContacted: Date.now(), lastChannel: 'In person' })
+    setSpoke(true)
+    navigator.vibrate?.(12)
+  }
+
+  function showOnMap() {
+    onClose()
+    window.dispatchEvent(new CustomEvent('deq:show-on-map', { detail: person.id }))
+  }
+
+  const mail = person.email
+    ? `mailto:${person.email}?subject=${encodeURIComponent(`Great meeting you${person.place ? ` at ${person.place.split(',')[0]}` : ''}`)}`
+    : null
+
+  // the four that matter most sit right under the name: remind, log, reach out, where
+  const message = person.linkedin
+    ? { id: 'linkedin', label: 'LinkedIn', icon: <LinkedInIcon />, href: linkedinUrl(person.linkedin) }
+    : mail && { id: 'mail', label: 'Mail', icon: <MailIcon />, href: mail }
+  const quick = [
+    { id: 'remind', label: 'Remind', icon: <BellIcon />, run: () => setChoosing(true) },
+    { id: 'spoke', label: spoke ? 'Logged' : 'Spoke Today', icon: <CheckIcon />, run: spokeToday, done: spoke },
+    message,
+    person.place && { id: 'map', label: 'Map', icon: <PinIcon />, run: showOnMap },
+  ].filter(Boolean)
+
+  // more, further down
+  const more = [
+    person.linkedin && mail && { id: 'mail', label: 'Mail', icon: <MailIcon />, href: mail },
+    { id: 'calendar', label: 'Calendar', icon: <CalendarPlusIcon />, run: () => setChoosing(true) },
+    { id: 'contact', label: 'Save Contact', icon: <PersonPlusIcon />, run: saveContact },
+    { id: 'share', label: 'Share', icon: <ShareIcon />, run: share },
+  ].filter(Boolean)
+
+  const details = [
+    person.note && { label: 'Stood out', value: person.note },
+    { label: 'Last spoke', value: spoke || days === 0 ? 'Today' : `${days} ${days === 1 ? 'day' : 'days'} ago` },
+    { label: 'Reach out', value: due.start.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) },
+  ].filter(Boolean)
+
+  const item = index => ({
+    initial: { opacity: 0, y: 14 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE, delay: 0.12 + index * 0.05 } },
+    exit: { opacity: 0, transition: { duration: 0.12 } },
+  })
 
   return (
     <motion.div
-      className="zoom"
+      className={lightText ? 'zoom light-ink' : 'zoom dark-ink'}
       style={{ color: glow['--card-ink'], background: base }}
-      onClick={onClose}
-      onPointerMove={onPointerMove}
-      onPointerLeave={resetTilt}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.3 } }}
@@ -69,40 +154,175 @@ export default function ZoomView({ person, onClose }) {
         transition={{ duration: 0.4 }}
       />
 
-      <div className="zoom-stage">
+      <button className="zoom-close" aria-label="Close" onClick={onClose}>
+        <CloseIcon size={20} />
+      </button>
+
+      {/* the whole page scrolls (even starting on the card); pulling down past
+          the top, iPhone's rubber band, closes it like a sheet */}
+      <div className="zoom-scroll" onScroll={event => event.currentTarget.scrollTop < -90 && onClose()}>
         <motion.div
           className="zoom-card"
           layoutId={`card-${person.id}`}
           transition={SPRING}
-          style={{ rotateX, rotateY }}
-          drag="y"
-          dragConstraints={{ top: 0, bottom: 0 }}
-          dragElastic={{ top: 0.1, bottom: 0.7 }}
-          onDragEnd={(_, info) => {
-            if (info.offset.y > 80 || info.velocity.y > 500) onClose()
+          style={{ rotateX, rotateY, transformPerspective: 1200 }} // its own perspective: no 3D on the scroller, so the page scrolls on iPhone
+          onPointerMove={event => {
+            const rect = event.currentTarget.getBoundingClientRect()
+            pointerX.set((event.clientX - rect.left) / rect.width - 0.5)
+            pointerY.set((event.clientY - rect.top) / rect.height - 0.5)
+          }}
+          onPointerLeave={() => {
+            pointerX.set(0)
+            pointerY.set(0)
           }}
         >
           <DeqCard person={person} interactive={false} />
         </motion.div>
 
-        <motion.div
-          className="zoom-caption"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0, transition: { ...SPRING, delay: 0.12 } }}
-          exit={{ opacity: 0, y: 8, transition: { duration: 0.15 } }}
-        >
+        <motion.div className="zoom-head" {...item(0)}>
           <h2 className="zoom-name">{person.name}</h2>
-          <p className="zoom-meta">
-            {[person.role, person.company].filter(Boolean).join(' · ')}
-          </p>
-          {person.note && <p className="zoom-note">“{person.note}”</p>}
-          <p className="zoom-meta soft">
-            Met {formatDate(metAt)}
-            {person.place && ` at ${person.place}`} · {days === 0 ? 'spoke today' : `${days} ${days === 1 ? 'day' : 'days'} since you spoke`}
-          </p>
-          {reminder && <p className="zoom-meta soft">Reach out {reminder}</p>}
+          {(roleOf(person) || companyOf(person)) && (
+            <p className="zoom-meta">{[person.role, person.company].filter(Boolean).join(' · ')}</p>
+          )}
+        </motion.div>
+
+        <motion.div className="zoom-actions" {...item(1)}>
+          {quick.map(action => (
+            <Circle key={action.id} action={action} />
+          ))}
+        </motion.div>
+
+        <motion.div className="zoom-group" {...item(2)}>
+          {details.map(row => (
+            <div key={row.label} className="zoom-row">
+              <span>{row.label}</span>
+              <p>{row.value}</p>
+            </div>
+          ))}
+        </motion.div>
+
+        <motion.p className="zoom-section" {...item(3)}>
+          Stay in touch with {first}
+        </motion.p>
+        <motion.div className="zoom-actions grid" {...item(4)}>
+          {more.map(action => (
+            <Circle key={action.id} action={action} />
+          ))}
         </motion.div>
       </div>
+
+      <AnimatePresence>
+        {choosing && (
+          <motion.div
+            className="zoom-chooser-scrim"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setChoosing(false)}
+          >
+            <motion.div
+              className="zoom-chooser"
+              role="dialog"
+              aria-label="Add a reminder"
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              transition={{ type: 'spring', bounce: 0, duration: 0.35 }}
+              onClick={event => event.stopPropagation()}
+            >
+              <p className="zoom-chooser-title">
+                Remind you to follow up with {first}
+                <span>{due.start.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}, 10:00</span>
+              </p>
+              {calendars.map(option => (
+                <button
+                  key={option.id}
+                  onClick={() => {
+                    setChoosing(false)
+                    option.run()
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+              <button className="cancel" onClick={() => setChoosing(false)}>
+                Cancel
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   )
 }
+
+function Circle({ action }) {
+  const inner = (
+    <>
+      <span className={action.done ? 'zoom-circle done' : 'zoom-circle'}>{action.icon}</span>
+      <span className="zoom-circle-label">{action.label}</span>
+    </>
+  )
+  return action.href ? (
+    <a className="zoom-action" href={action.href} target="_blank" rel="noreferrer">
+      {inner}
+    </a>
+  ) : (
+    <button className="zoom-action" onClick={action.run}>
+      {inner}
+    </button>
+  )
+}
+
+// ---------- icons, SF Symbols style ----------
+const Svg = ({ children }) => (
+  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {children}
+  </svg>
+)
+const BellIcon = () => (
+  <Svg>
+    <path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15Z" />
+    <path d="M10 20.5a2.2 2.2 0 0 0 4 0" />
+  </Svg>
+)
+const MailIcon = () => (
+  <Svg>
+    <rect x="3.5" y="5.5" width="17" height="13" rx="2.5" />
+    <path d="m4.5 7 7.5 6 7.5-6" />
+  </Svg>
+)
+const PinIcon = () => (
+  <Svg>
+    <path d="M12 21s-6.5-5.6-6.5-11A6.5 6.5 0 0 1 18.5 10c0 5.4-6.5 11-6.5 11Z" />
+    <circle cx="12" cy="10" r="2.3" />
+  </Svg>
+)
+const LinkedInIcon = () => (
+  <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+    <path d="M6.94 8.5H3.56V20h3.38V8.5ZM5.25 3a1.97 1.97 0 1 0 0 3.94 1.97 1.97 0 0 0 0-3.94ZM20.44 13.4c0-3.1-1.66-4.54-3.87-4.54-1.78 0-2.58.98-3.02 1.67V8.5h-3.38c.04.95 0 11.5 0 11.5h3.38v-6.42c0-.34.02-.69.13-.93.27-.69.89-1.4 1.94-1.4 1.37 0 1.92 1.05 1.92 2.58V20h3.38v-6.6Z" />
+  </svg>
+)
+const CalendarPlusIcon = () => (
+  <Svg>
+    <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+    <path d="M3.5 9.5h17M8 3v4M16 3v4M12 12.5v5M9.5 15h5" />
+  </Svg>
+)
+const PersonPlusIcon = () => (
+  <Svg>
+    <circle cx="10" cy="8" r="3.5" />
+    <path d="M3.5 19.5a6.5 6.5 0 0 1 13 0M19 8v5M16.5 10.5h5" />
+  </Svg>
+)
+const ShareIcon = () => (
+  <Svg>
+    <path d="M12 3.5v11M8 7.5l4-4 4 4" />
+    <path d="M8.5 10.5H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1.5" />
+  </Svg>
+)
+const CheckIcon = () => (
+  <Svg>
+    <path d="m5.5 12.5 4.2 4.2 8.8-9.2" />
+  </Svg>
+)

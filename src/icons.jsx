@@ -67,3 +67,10 @@ export const CategoriesIcon = props => (
     <rect x="13.5" y="13.5" width="6" height="6" rx="1.6" />
   </Icon>
 )
+
+export const SearchIcon = props => (
+  <Icon {...props}>
+    <circle cx="10.75" cy="10.75" r="6.25" />
+    <path d="m15.5 15.5 4.25 4.25" />
+  </Icon>
+)

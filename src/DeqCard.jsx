@@ -179,7 +179,22 @@ function DeqCard({ person, interactive = true, open = true }) {
             <h2 className={person.name.length > 16 ? 'xcard-hero long' : 'xcard-hero'}>{person.name}</h2>
             {roleOf(person) && <p className="xcard-sub">{roleOf(person)}</p>}
             <p className="xcard-met">
-              {[person.place, formatDate(metAt)].filter(Boolean).join(' · ')}
+              {person.place && interactive ? (
+                // the place opens the map on them, with everyone else met there
+                <button
+                  className="xcard-place"
+                  onClick={event => {
+                    event.stopPropagation()
+                    window.dispatchEvent(new CustomEvent('deq:show-on-map', { detail: person.id }))
+                  }}
+                >
+                  {person.place}
+                </button>
+              ) : (
+                person.place
+              )}
+              {person.place && ' · '}
+              {formatDate(metAt)}
             </p>
 
             {editing ? (

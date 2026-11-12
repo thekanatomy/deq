@@ -29,7 +29,7 @@ export function cascade(index) {
   }
 }
 
-export default function MenuSheet({ owner, count, onOwner, onClose }) {
+export default function MenuSheet({ owner, count, onOwner, onMyCard, onClose }) {
   const [page, setPage] = useState(null) // null | 'name' | 'account' | 'about'
   const [name, setName] = useState(owner)
   const account = useAccount()
@@ -45,6 +45,7 @@ export default function MenuSheet({ owner, count, onOwner, onClose }) {
     account.user
       ? { id: 'account', label: 'Account', detail: account.user.email }
       : { id: 'account', label: 'Sign In', detail: 'Back up your deq' },
+    { id: 'card', label: 'Your Card', detail: 'Apple Wallet' },
     { id: 'name', label: 'Your Name', detail: owner || 'Not set' },
     { id: 'about', label: 'About Deq' },
   ]
@@ -95,7 +96,7 @@ export default function MenuSheet({ owner, count, onOwner, onClose }) {
               <motion.button
                 key={row.id}
                 className="menu-row"
-                onClick={() => setPage(row.id)}
+                onClick={() => (row.id === 'card' ? onMyCard() : setPage(row.id))}
                 {...cascade(index)}
               >
                 <span>{row.label}</span>
