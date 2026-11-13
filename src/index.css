@@ -5616,3 +5616,78 @@ html.sideways body {
 .note-who { display: flex; align-items: center; gap: 0.5rem; color: var(--label); font-size: 0.875rem; font-weight: 500; }
 .note-who span { color: var(--label-secondary); font-weight: 400; }
 .note-card mark { padding: 0 0.125rem; border-radius: 0.25rem; background: rgba(255, 214, 10, 0.3); color: inherit; }
+
+/* ---------- "What stood out?": blocks of memory cues ---------- */
+.flow-stage:has(.note-builder) { align-items: start; padding-top: 2dvh; padding-bottom: 1rem; overflow-y: auto; }
+.flow-stage:has(.note-builder) .question-text { font-size: 1.75rem; }
+.note-builder { display: grid; gap: 0.75rem; margin-top: 1rem; text-align: left; }
+.nb-picked { display: flex; flex-wrap: wrap; gap: 0.375rem; overflow: hidden; }
+.nb-picked button {
+  padding: 0.375rem 0.7rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--label);
+  color: var(--bg);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.nb-picked button span { opacity: 0.6; margin-left: 0.125rem; }
+.nb-blocks { border-radius: 1rem; background: var(--surface); overflow: hidden; }
+.nb-block + .nb-block { border-top: 1px solid rgba(128, 128, 128, 0.2); }
+.nb-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 0;
+  background: none;
+  color: var(--label);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.nb-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: var(--bg); font-size: 1rem; }
+.nb-name { flex: 1; font-size: var(--size-body); }
+.nb-count {
+  min-width: 1.4rem;
+  padding: 0.0625rem 0.45rem;
+  border-radius: 999px;
+  background: var(--tint-fill, #0a84ff);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: center;
+}
+.nb-chev { color: var(--label-tertiary, #8e8e93); font-size: 1.25rem; transition: transform 250ms var(--ease-out); }
+.nb-block.open .nb-chev { transform: rotate(90deg); }
+.nb-options { overflow: hidden; }
+/* light inside: small outlined chips, lots of them */
+.nb-chips { display: flex; flex-wrap: wrap; gap: 0.375rem; padding: 0 1rem 1rem 3.625rem; }
+.nb-chips button {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 999px;
+  background: none;
+  color: var(--label);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 120ms var(--ease-out), color 120ms var(--ease-out), transform 120ms var(--ease-out);
+}
+.nb-chips button:active { transform: scale(0.95); }
+.nb-chips button.on { border-color: var(--label); background: var(--label); color: var(--bg); }
+.nb-extra {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 0.875rem;
+  background: var(--surface);
+  color: var(--label);
+  font: inherit;
+  font-size: var(--size-body);
+  resize: none;
+  outline: none;
+}

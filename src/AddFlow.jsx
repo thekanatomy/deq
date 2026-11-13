@@ -10,6 +10,7 @@ import { searchPlaces } from './places'
 import DateWheel from './Wheel.jsx'
 import { openReminder } from './calendar'
 import ScanReading from './ScanReading'
+import NoteBuilder from './NoteBuilder'
 import { useBack } from './back'
 
 // Adding someone in a few taps, one question at a time. Names come from the QR or a
@@ -567,17 +568,7 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
               />
             )}
 
-            {current.key === 'note' && (
-              <textarea
-                ref={inputRef}
-                className="answer note"
-                rows={3}
-                placeholder="Red jacket, also from Chennai, loves F1…"
-                value={fields.note}
-                onChange={event => set('note', event.target.value)}
-                onKeyDown={onKeyDown}
-              />
-            )}
+            {current.key === 'note' && <NoteBuilder value={fields.note} onChange={note => set('note', note)} />}
 
           </motion.div>
         </AnimatePresence>
