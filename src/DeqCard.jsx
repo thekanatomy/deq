@@ -6,6 +6,7 @@ import { db } from './db'
 import { shrinkPhoto } from './photo'
 import { readPhoto } from './vision'
 import { companyOf, roleOf } from './text'
+import AvatarEditor from './AvatarEditor'
 import { nextStep, spokeNow, talkingPoints } from './history'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -78,9 +79,9 @@ function DeqCard({ person, interactive = true, open = true }) {
   const [editing, setEditing] = useState(false)
   const [contact, setContact] = useState({ linkedin: person.linkedin ?? '', email: person.email ?? '' })
   const cardRef = useRef(null)
-  const cameraInput = useRef(null)
   const contactPhoto = useRef(null)
   const [reading, setReading] = useState(false)
+  const [photoOpen, setPhotoOpen] = useState(false)
   const photoUrl = usePhotoUrl(person.photo)
   const shape = useSquircle(cardRef)
 
@@ -101,15 +102,6 @@ function DeqCard({ person, interactive = true, open = true }) {
     await db.cards.update(person.id, spokeNow(person, channel))
     setUpdating(false)
     setAsking(null)
-  }
-
-  // Tapping the avatar opens the camera; then the contact fields open to fill in.
-  async function savePhoto(event) {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-    await db.cards.update(person.id, { photo: await shrinkPhoto(file) })
-    setEditing(true)
   }
 
   // A screenshot of their LinkedIn, a card, an email signature: the AI fills in
@@ -168,14 +160,19 @@ function DeqCard({ person, interactive = true, open = true }) {
             <header className="xcard-top">
               <span className="xcard-company big">{companyOf(person) || 'Deq'}</span>
               {interactive ? (
-                <button className="avatar-button" aria-label="Take their photo" onClick={() => cameraInput.current.click()}>
+                <button
+                  className="avatar-button"
+                  aria-label={person.photo ? `See ${person.name.split(' ')[0]}’s photo` : 'Add their photo'}
+                  onClick={event => {
+                    event.stopPropagation()
+                    setPhotoOpen(true)
+                  }}
+                >
                   {avatar}
                 </button>
               ) : (
                 avatar
               )}
-              {/* capture="environment" opens the back camera straight away on phones */}
-              <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={savePhoto} />
             </header>
 
             <h2 className={person.name.length > 16 ? 'xcard-hero long' : 'xcard-hero'}>{person.name}</h2>
@@ -290,6 +287,8 @@ function DeqCard({ person, interactive = true, open = true }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>{photoOpen && <AvatarEditor key="photo" person={person} onClose={() => setPhotoOpen(false)} />}</AnimatePresence>
 
       {shape && (
         <svg className="xcard-edge" viewBox={`0 0 ${shape.width} ${shape.height}`} aria-hidden="true">

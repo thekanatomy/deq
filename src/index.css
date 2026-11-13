@@ -5009,3 +5009,124 @@ html.sideways body {
 .zoom-vibe { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
 .zoom-vibe i { height: 8px; border-radius: 999px; background: var(--zoom-line); }
 .zoom-vibe-text { margin: 0.5rem 0 0; font-size: var(--size-body); font-weight: 600; }
+
+/* ---------- a person's photo: view, change, move and scale ---------- */
+.photo-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 320;
+  color: #fff;
+}
+.photo-view {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 1.25rem;
+  background: rgba(0, 0, 0, 0.92);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+.photo-view.empty { background: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.photo-bar {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 0.75rem);
+  left: 1.25rem;
+  right: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.photo-edit {
+  padding: 0.5rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font: inherit;
+  font-size: var(--size-body);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+}
+.photo-close {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  cursor: pointer;
+}
+.photo-big {
+  width: min(78vw, 20rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+}
+.photo-name { margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
+.photo-sheet { z-index: 2; }
+.zoom-chooser button.destructive { color: #ff3b30; }
+
+.cropper {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  align-items: center;
+  background: #000;
+}
+.cropper-title {
+  position: relative;
+  z-index: 1; /* above the dimmed surround */
+  margin: calc(env(safe-area-inset-top) + 1.25rem) 0 0;
+  font-size: var(--size-body);
+  font-weight: 600;
+}
+.cropper-stage {
+  position: relative;
+  overflow: visible;
+  touch-action: none; /* the stage handles drag and pinch itself */
+  cursor: grab;
+}
+.cropper-stage img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  max-width: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+/* everything outside the circle is dimmed, like iOS */
+.cropper-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.7);
+  outline: 1px solid rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+.cropper-bar {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 1.5rem calc(env(safe-area-inset-bottom) + 1.5rem);
+  position: relative;
+  z-index: 1;
+}
+.cropper-bar button {
+  padding: 0.5rem 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  font: inherit;
+  font-size: 1.0625rem;
+  cursor: pointer;
+}
+.cropper-bar button.strong { font-weight: 700; }
