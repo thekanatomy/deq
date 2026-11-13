@@ -5593,3 +5593,26 @@ html.sideways body {
 .place-text b { font-size: var(--size-body); font-weight: 500; }
 .place-text small { color: var(--label-secondary); font-size: 0.875rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .place-count { color: var(--label-secondary); font-size: var(--size-body); font-variant-numeric: tabular-nums; }
+
+/* ---------- Notes search: every note as a card ---------- */
+.note-feed { display: grid; gap: 0.625rem; }
+.note-card {
+  display: grid;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 0;
+  border-radius: 1rem;
+  background: var(--surface);
+  color: var(--label);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out);
+}
+.note-card:active { transform: scale(0.98); }
+.note-text { margin: 0; font-size: 1.0625rem; line-height: 1.4; }
+.note-next { margin: 0; color: var(--label-secondary); font-size: 0.9375rem; line-height: 1.4; }
+.note-who { display: flex; align-items: center; gap: 0.5rem; color: var(--label); font-size: 0.875rem; font-weight: 500; }
+.note-who span { color: var(--label-secondary); font-weight: 400; }
+.note-card mark { padding: 0 0.125rem; border-radius: 0.25rem; background: rgba(255, 214, 10, 0.3); color: inherit; }

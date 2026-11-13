@@ -29,7 +29,7 @@ const dateText = person =>
 const FIELDS = {
   Name: person => [person.name, roleOf(person), companyOf(person)],
   Place: person => [person.place],
-  Notes: person => [person.note],
+  Notes: person => [person.note, person.next],
   Date: person => [dateText(person)],
 }
 
@@ -232,8 +232,9 @@ export default function Search({ people, startScope = 'All', focusId = null, onO
                   </button>
                 )}
                 {scope === 'Name' && <NameHelp people={people} onOpen={open} />}
+                {scope === 'Notes' && <NotesFeed people={people} words={[]} onOpen={open} />}
                 {scope === 'Place' && <PlaceHelp people={people} onMap={() => setScope('Map')} onPlace={place => search(place, 'Place')} />}
-                {scope !== 'Name' && scope !== 'Place' && newest.length > 0 && (
+                {!['Name', 'Place', 'Notes'].includes(scope) && newest.length > 0 && (
                   <section className="search-section">
                     <p className="search-heading">Recently met</p>
                     <div className="face-row">
@@ -247,7 +248,7 @@ export default function Search({ people, startScope = 'All', focusId = null, onO
                   </section>
                 )}
 
-                {scope !== 'Name' && scope !== 'Place' && places.length > 0 && (
+                {!['Name', 'Place', 'Notes'].includes(scope) && places.length > 0 && (
                   <section className="search-section">
                     <p className="search-heading">Places</p>
                     <div className="chip-wrap">
@@ -260,7 +261,7 @@ export default function Search({ people, startScope = 'All', focusId = null, onO
                   </section>
                 )}
 
-                {scope !== 'Name' && scope !== 'Place' && (
+                {!['Name', 'Place', 'Notes'].includes(scope) && (
                 <section className="search-section">
                   <p className="search-heading">When</p>
                   <div className="chip-wrap">
@@ -304,6 +305,10 @@ export default function Search({ people, startScope = 'All', focusId = null, onO
                     <CloseIcon size={13} />
                   </button>
                 )}
+                {scope === 'Notes' ? (
+                  <NotesFeed people={results.map(result => result.person)} words={words} onOpen={open} />
+                ) : (
+                <>
                 <p className="search-count">
                   {results.length === 0 ? 'No one matches yet' : `${results.length} ${results.length === 1 ? 'person' : 'people'}`}
                 </p>
@@ -335,6 +340,8 @@ export default function Search({ people, startScope = 'All', focusId = null, onO
                     <span className="result-when">{ago(metAt(person))}</span>
                   </motion.button>
                 ))}
+                </>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -507,6 +514,49 @@ function PlaceHelp({ people, onMap, onPlace }) {
           </div>
         </section>
       )}
+    </>
+  )
+}
+
+// Notes search: every note as a little card, newest first. Typing a word keeps
+// only the notes that mention it, with the word highlighted.
+function NotesFeed({ people, words, onOpen }) {
+  const notes = people
+    .filter(person => person.note?.trim() || person.next?.trim())
+    .sort((a, b) => metAt(b) - metAt(a))
+  if (!notes.length) {
+    return (
+      <p className="search-count">
+        {words.length ? 'No note mentions that yet' : 'Notes you write in “What stood out?” show up here'}
+      </p>
+    )
+  }
+  return (
+    <>
+      <p className="search-count">
+        {notes.length} {notes.length === 1 ? 'note' : 'notes'}
+      </p>
+      <div className="note-feed">
+        {notes.map(person => (
+          <button key={person.id} className="note-card" onClick={() => onOpen(person)}>
+            {person.note?.trim() && (
+              <p className="note-text">
+                “<Highlight text={person.note.trim()} words={words} />”
+              </p>
+            )}
+            {person.next?.trim() && (
+              <p className="note-next">
+                Next time: <Highlight text={person.next.trim()} words={words} />
+              </p>
+            )}
+            <span className="note-who">
+              <Avatar person={person} size={24} />
+              {person.name}
+              <span>· {ago(metAt(person))}</span>
+            </span>
+          </button>
+        ))}
+      </div>
     </>
   )
 }
