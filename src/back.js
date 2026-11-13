@@ -1,6 +1,4 @@
-import { MotionGlobalConfig } from 'motion/react'
 import { useEffect, useRef } from 'react'
-import { isIOS, isStandalone } from './browser'
 
 // The phone's own Back (Android's back gesture or button, the browser's back
 // arrow) closes whatever is open in deq, one layer at a time, instead of leaving
@@ -9,41 +7,13 @@ import { isIOS, isStandalone } from './browser'
 const stack = [] // open layers, newest last
 let skip = 0 // history steps we removed ourselves, so their popstate isn't a Back
 
-// iPhone Safari's swipe from the left edge plays its own slide, showing a picture of
-// the screen underneath. deq's own closing animation on top of it looks broken, so
-// after an edge swipe the layer closes instantly and Safari's slide is the only movement.
-let edgeTouchAt = 0
-const safariTab = isIOS && !isStandalone()
-
 if (typeof window !== 'undefined') {
-  if (safariTab) {
-    window.addEventListener(
-      'touchstart',
-      event => {
-        const x = event.touches[0]?.clientX ?? 100
-        if (x < 30 || x > window.innerWidth - 30) edgeTouchAt = Date.now()
-      },
-      { passive: true },
-    )
-  }
-
   window.addEventListener('popstate', () => {
     if (skip > 0) {
       skip--
       return
     }
-    // how many layers this history step says should be open
-    const depth = history.state?.deqLayer ?? 0
-    if (depth > stack.length) {
-      // a forward swipe onto a layer that's already closed: step back again, quietly
-      skip++
-      history.go(stack.length - depth)
-      return
-    }
-    const swiped = safariTab && Date.now() - edgeTouchAt < 2000
-    if (swiped) MotionGlobalConfig.skipAnimations = true
-    while (stack.length > depth) stack.pop().close()
-    if (swiped) setTimeout(() => (MotionGlobalConfig.skipAnimations = false), 600)
+    stack.pop()?.close()
   })
 }
 
