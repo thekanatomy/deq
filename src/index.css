@@ -1773,6 +1773,10 @@ body {
 
 .menu-list,
 .menu-page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto; /* long pages (Privacy) scroll inside the menu */
+  -webkit-overflow-scrolling: touch;
   padding: 4.5rem 1.5rem calc(env(safe-area-inset-bottom) + 2rem);
 }
 
@@ -5356,3 +5360,18 @@ html.sideways body {
 .w2-field span { color: var(--label-secondary); font-size: 1.0625rem; }
 .w2-field input { flex: 1; min-width: 0; height: 52px; border: 0; background: none; color: var(--label); font: inherit; font-size: 1.0625rem; outline: none; }
 .w2-notnow { display: block; margin: 0.75rem auto 0; }
+
+/* ---------- Privacy: grouped like iPhone Settings ---------- */
+.privacy { padding-bottom: 2rem; }
+.privacy-head {
+  margin: 1.5rem 0 0.375rem 1rem;
+  color: var(--label-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.privacy-group { margin-top: 0; }
+.privacy-group li { display: grid; gap: 0.25rem; padding: 0.8rem 1rem 0.8rem 0; }
+.about-group.privacy-group li b { color: var(--label); font-size: var(--size-body); font-weight: 600; }
+.about-group.privacy-group li span:last-child { color: var(--label-secondary); font-size: 0.9375rem; line-height: 1.4; text-align: left; }
