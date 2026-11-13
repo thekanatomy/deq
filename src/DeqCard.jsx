@@ -7,6 +7,7 @@ import { shrinkPhoto } from './photo'
 import { readPhoto } from './vision'
 import { companyOf, roleOf } from './text'
 import AvatarEditor from './AvatarEditor'
+import ReachOut from './ReachOut'
 import { nextStep, spokeNow, talkingPoints } from './history'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -82,6 +83,7 @@ function DeqCard({ person, interactive = true, open = true }) {
   const contactPhoto = useRef(null)
   const [reading, setReading] = useState(false)
   const [photoOpen, setPhotoOpen] = useState(false)
+  const [reachOpen, setReachOpen] = useState(false)
   const photoUrl = usePhotoUrl(person.photo)
   const shape = useSquircle(cardRef)
 
@@ -257,7 +259,14 @@ function DeqCard({ person, interactive = true, open = true }) {
             ) : (
               // the glance: when to reach out, and what to talk about. Everything else is one more tap.
               <div className="xcard-foot calm">
-                <button className={`xcard-when ${next.late ? 'late' : next.soon ? 'soon' : ''}`} onClick={() => setUpdating(true)} aria-label={`${next.label} ${next.detail}. Tap to log that you spoke.`}>
+                <button
+                  className={`xcard-when ${next.late ? 'late' : next.soon ? 'soon' : ''}`}
+                  onClick={event => {
+                    event.stopPropagation()
+                    setReachOpen(true)
+                  }}
+                  aria-label={`${next.label} ${next.detail}. Tap to change the date or add a note.`}
+                >
                   <i aria-hidden="true" />
                   {next.label}
                   {next.detail && <span> · {next.detail}</span>}
@@ -293,6 +302,7 @@ function DeqCard({ person, interactive = true, open = true }) {
       </AnimatePresence>
 
       <AnimatePresence>{photoOpen && <AvatarEditor key="photo" person={person} onClose={() => setPhotoOpen(false)} />}</AnimatePresence>
+      <AnimatePresence>{reachOpen && <ReachOut key="reach" person={person} onClose={() => setReachOpen(false)} />}</AnimatePresence>
 
       {shape && (
         <svg className="xcard-edge" viewBox={`0 0 ${shape.width} ${shape.height}`} aria-hidden="true">

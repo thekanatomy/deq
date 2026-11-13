@@ -5162,3 +5162,59 @@ html.sideways body {
 
 /* gone cold: the card's colour drains away until you speak again */
 .xcard.cold { filter: saturate(0.15) brightness(0.8); }
+
+/* ---------- Reach out: move the date, leave a note, see what changed ---------- */
+.reach-page {
+  position: fixed;
+  inset: 0;
+  z-index: 310;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--label);
+}
+.reach-top {
+  display: flex;
+  justify-content: flex-end;
+  padding: calc(env(safe-area-inset-top) + 0.75rem) 1.25rem 0;
+}
+.reach-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.5rem 1.5rem calc(env(safe-area-inset-bottom) + 2rem);
+  text-align: center;
+}
+.reach-title { margin: 0; font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; }
+.reach-date { margin: 1rem 0 0; font-size: 1.375rem; font-weight: 700; }
+.reach-in { margin: 0.125rem 0 0; color: var(--label-secondary); font-size: var(--size-callout); }
+.reach-quick { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin: 1.25rem 0 0.5rem; }
+.reach-quick button {
+  padding: 0.5rem 0.9rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--label);
+  font: inherit;
+  font-size: var(--size-callout);
+  font-weight: 600;
+  cursor: pointer;
+}
+.reach-quick button.active { background: var(--label); color: var(--bg); }
+.reach-label {
+  display: block;
+  margin: 1.5rem 0 0.5rem;
+  color: var(--label-secondary);
+  font-size: var(--size-callout);
+  font-weight: 600;
+  text-align: left;
+}
+.reach-note { width: 100%; margin-bottom: 1.25rem; font: inherit; font-size: var(--size-body); text-align: left; }
+.reach-spoke { display: block; margin: 0.75rem auto 0; }
+.reach-changes { margin-top: 2.25rem; text-align: left; }
+.reach-changes ol { margin: 0; padding: 0; list-style: none; border-radius: 1rem; background: var(--surface); overflow: hidden; }
+.reach-changes li { display: grid; gap: 0.125rem; padding: 0.75rem 1rem; }
+.reach-changes li + li { border-top: 1px solid rgba(128, 128, 128, 0.22); }
+.reach-changes b { font-size: var(--size-body); }
+.reach-changes span { font-size: var(--size-callout); }
+.reach-changes small { color: var(--label-secondary); font-size: 0.8125rem; }
