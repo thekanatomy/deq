@@ -4720,3 +4720,52 @@ html.sideways body {
   .scan-reading-sweep,
   .scan-reading-word { animation: none; }
 }
+
+/* ---------- moving from Safari to the Home Screen app (iPhone) ---------- */
+.intro-bring {
+  position: absolute;
+  left: 1.25rem;
+  right: 1.25rem;
+  bottom: calc(env(safe-area-inset-bottom) + 6.5rem);
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+.intro-bring button {
+  padding: 0.7rem 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  color: #fff;
+  font: inherit;
+  font-size: var(--size-callout);
+  font-weight: 700;
+  cursor: pointer;
+}
+.intro-bring button:disabled { opacity: 0.7; }
+.intro-bring p {
+  max-width: 18rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.home-steps li.home-carry { align-items: flex-start; }
+.home-carry > div { line-height: 1.4; }
+.home-copy {
+  margin-left: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--label);
+  color: var(--bg);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}

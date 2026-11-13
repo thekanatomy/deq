@@ -1,11 +1,13 @@
 import { motion } from 'motion/react'
 import { useState } from 'react'
-import { isAndroid, isIOS } from './browser'
+import { isAndroid, isIOS, isStandalone } from './browser'
 
 // Put deq on the Home Screen. Two tabs, like Apple's own pickers: iPhone and
 // Android, opening on the phone you're holding. Android installs in one tap
 // through the browser's own prompt; iPhone needs the Share menu, so it shows steps.
-export default function HomeScreenSheet({ installPrompt, onInstalled, onClose }) {
+export default function HomeScreenSheet({ installPrompt, count = 0, copied = false, onCopy, onInstalled, onClose }) {
+  // iPhone: the Home Screen app starts with empty storage, so the people here travel by clipboard
+  const carry = isIOS && !isStandalone() && count > 0 && onCopy
   const [platform, setPlatform] = useState(isAndroid ? 'android' : 'apple')
 
   async function install() {
@@ -76,6 +78,23 @@ export default function HomeScreenSheet({ installPrompt, onInstalled, onClose })
           )
         ) : (
           <ol className="home-steps">
+            {carry && (
+              <li className="home-carry">
+                <span>{copied ? '✓' : '0'}</span>
+                <div>
+                  {copied ? (
+                    <>
+                      <b>Your {count === 1 ? 'person is' : `${count} people are`} copied.</b> Paste them in when the Home Screen app opens. Don’t copy anything else until then.
+                    </>
+                  ) : (
+                    <>
+                      Copy your {count === 1 ? 'person' : `${count} people`} to bring them along{' '}
+                      <button className="home-copy" onClick={onCopy}>Copy</button>
+                    </>
+                  )}
+                </div>
+              </li>
+            )}
             {isIOS ? (
               <>
                 <li>

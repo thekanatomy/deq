@@ -124,7 +124,18 @@ export default function ZoomView({ person, onClose }) {
     { id: 'share', label: 'Share', icon: <ShareIcon />, run: share },
   ].filter(Boolean)
 
+  // first line: when they came into your deq. "Met" only when there's a place to have
+  // met them at; added from home (a LinkedIn screenshot, a typed contact) is just "Added".
+  const firstDate = new Date(person.metAt ?? person.lastContacted)
+  const firstDay = firstDate.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    ...(firstDate.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}),
+  })
   const details = [
+    person.place
+      ? { label: 'Met', value: `${firstDay} · ${person.place.split(',')[0]}` }
+      : { label: 'Added', value: firstDay },
     person.note && { label: 'Stood out', value: person.note },
     { label: 'Last spoke', value: spoke || days === 0 ? 'Today' : `${days} ${days === 1 ? 'day' : 'days'} ago` },
     { label: 'Reach out', value: due.start.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) },

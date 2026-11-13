@@ -1,12 +1,24 @@
 import { motion } from 'motion/react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // The front door of an empty deq: the film (made in Remotion, public/intro.mp4)
 // loops edge to edge like a living graphic, muted and with no controls, and the
 // + to add someone sits on top of it the whole time. Install (top left) and a
 // quiet Skip (top right) are always there too.
-export default function Intro({ onAdd, onDone, onInstall }) {
+export default function Intro({ onAdd, onDone, onInstall, onBringOver }) {
   const film = useRef(null)
+  const [bringing, setBringing] = useState('idle') // idle | working | nothing | failed
+
+  // iPhone Home Screen app: paste in the people copied from Safari
+  async function bringOver() {
+    setBringing('working')
+    try {
+      const added = await onBringOver()
+      setBringing(added > 0 ? 'idle' : 'nothing') // added people: the deck fills and the film steps aside
+    } catch {
+      setBringing('failed')
+    }
+  }
 
   useEffect(() => {
     const video = film.current
@@ -61,6 +73,21 @@ export default function Intro({ onAdd, onDone, onInstall }) {
       <button className="intro-skip" onClick={onDone}>
         Skip
       </button>
+
+      {onBringOver && (
+        <motion.div
+          className="intro-bring"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', bounce: 0, duration: 0.6, delay: 0.8 }}
+        >
+          <button onClick={bringOver} disabled={bringing === 'working'}>
+            {bringing === 'working' ? 'Bringing them over…' : 'Bring over your people from Safari'}
+          </button>
+          {bringing === 'nothing' && <p>Nothing copied yet. In Safari, open deq.one and tap Install, then come back.</p>}
+          {bringing === 'failed' && <p>Couldn’t paste. Tap again and choose Paste.</p>}
+        </motion.div>
+      )}
 
       <motion.button
         className="intro-add"

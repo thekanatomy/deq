@@ -21,7 +21,8 @@ import SaveSheet from './SaveSheet'
 import Intro from './Intro'
 import InAppGate from './InAppGate'
 import HomeScreenSheet from './HomeScreenSheet'
-import { inAppBrowser, isAndroid, isStandalone, recall, remember } from './browser'
+import { inAppBrowser, isAndroid, isIOS, isStandalone, recall, remember } from './browser'
+import { cameToCarry, copyDeck, markForCarry, pasteDeck } from './move'
 import ZoomView from './ZoomView.jsx'
 import { meshImage } from './brands'
 import { db, visible } from './db'
@@ -118,7 +119,24 @@ export default function App() {
   // Android: the pill only shows once Chrome allows installing, and a tap opens
   // Chrome's own install prompt straight away. iPhone: the sheet with the steps.
   const canInstall = !installed && (!isAndroid || Boolean(installPrompt))
+  // iPhone keeps the Home Screen app's storage apart from Safari's: tapping Install
+  // copies your people, so the Home Screen app can paste them in when it first opens.
+  const [deckCopied, setDeckCopied] = useState(false)
+  // Safari with people in it: mark the address the Home Screen app will open at
+  const peopleCount = people?.length
+  useEffect(() => {
+    if (!isIOS || isStandalone() || peopleCount === undefined) return
+    markForCarry(peopleCount > 0)
+  }, [peopleCount])
+  // Home Screen app: only offer "Bring over" if it was installed from a Safari deq with people
+  const [canBringOver] = useState(() => isIOS && isStandalone() && cameToCarry())
+  function copyForHomeScreen() {
+    copyDeck()
+      .then(() => setDeckCopied(true))
+      .catch(() => setDeckCopied(false))
+  }
   async function startInstall() {
+    if (isIOS && !isStandalone() && (people?.length ?? 0) > 0) copyForHomeScreen() // inside the tap, as Safari requires
     if (!isAndroid || !installPrompt) return setInstallOpen(true)
     installPrompt.prompt()
     const choice = await installPrompt.userChoice.catch(() => null)
@@ -655,6 +673,9 @@ export default function App() {
           <HomeScreenSheet
             key="install"
             installPrompt={installPrompt}
+            count={everyone.length}
+            copied={deckCopied}
+            onCopy={copyForHomeScreen}
             onInstalled={() => setInstalled(true)}
             onClose={() => setInstallOpen(false)}
           />
@@ -663,6 +684,9 @@ export default function App() {
           <HomeScreenSheet
             key="home-tip"
             installPrompt={installPrompt}
+            count={everyone.length}
+            copied={deckCopied}
+            onCopy={copyForHomeScreen}
             onClose={() => {
               remember('deq-home-tip', '1', true)
               setHomeTip(false)
@@ -688,6 +712,8 @@ export default function App() {
             key="intro"
             onDone={() => (watchIntro ? setWatchIntro(false) : setSkippedFilm(true))}
             onInstall={canInstall && !watchIntro ? startInstall : null}
+            // the Home Screen app on iPhone starts empty: offer to bring the cards over from Safari
+            onBringOver={canBringOver && !watchIntro ? pasteDeck : null}
             // + on the film: add the person whose card brought you here, or scan someone new
             onAdd={() => {
               setWatchIntro(false)
