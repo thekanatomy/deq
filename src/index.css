@@ -564,6 +564,8 @@ button {
 }
 
 .scanner-top {
+  display: flex;
+  justify-content: flex-end; /* ✕ on the right, like everywhere in deq */
   padding: calc(env(safe-area-inset-top) + 1rem) 1.25rem 0;
 }
 
@@ -992,7 +994,7 @@ button {
 
 .sheet-bar {
   display: flex;
-  justify-content: flex-start;
+  justify-content: flex-end;
   margin-bottom: 0.5rem;
 }
 
@@ -4854,8 +4856,9 @@ html.sideways body {
   background: none;
   color: inherit;
   font: inherit;
-  font-size: var(--size-body);
+  font-size: 4.6cqw; /* sized with the card, so it fits the small copy in the detail view too */
   font-weight: 700;
+  white-space: nowrap;
   text-align: left;
   cursor: pointer;
 }
@@ -4874,7 +4877,7 @@ html.sideways body {
   max-width: 100%;
   margin: 0 0 0 1rem;
   overflow: hidden;
-  font-size: var(--size-callout);
+  font-size: 4.1cqw;
   opacity: 0.85;
   white-space: nowrap;
   text-overflow: ellipsis;

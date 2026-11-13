@@ -392,25 +392,8 @@ export default function App() {
       <div className="page">
         <header className="top">
           {/* Wallet's top bar: the title on the left, + and a [categories | ⋯] pill on the right.
-              With a card open: ✕ on the left, ⋯ (this card's options) on the right. */}
+              With a card open: ⋯ (this card's options) on the left, ✕ on the right, like every other close in deq. */}
           <div className="top-bar">
-            <AnimatePresence mode="popLayout" initial={false}>
-              {isOpen ? (
-                <motion.button
-                  key="close"
-                  className="glass-button"
-                  aria-label="Close card"
-                  onClick={closeCard}
-                  {...POP}
-                >
-                  <CloseIcon />
-                </motion.button>
-              ) : (
-                <motion.h1 key="title" className="top-name" {...POP}>
-                  {empty ? '' : 'deq'}
-                </motion.h1>
-              )}
-            </AnimatePresence>
             <AnimatePresence mode="popLayout" initial={false}>
               {isOpen ? (
                 <motion.button
@@ -421,6 +404,23 @@ export default function App() {
                   {...POP}
                 >
                   <MoreIcon />
+                </motion.button>
+              ) : (
+                <motion.h1 key="title" className="top-name" {...POP}>
+                  {empty ? '' : 'deq'}
+                </motion.h1>
+              )}
+            </AnimatePresence>
+            <AnimatePresence mode="popLayout" initial={false}>
+              {isOpen ? (
+                <motion.button
+                  key="close"
+                  className="glass-button"
+                  aria-label="Close card"
+                  onClick={closeCard}
+                  {...POP}
+                >
+                  <CloseIcon />
                 </motion.button>
               ) : (
                 <motion.div key="actions" className="top-actions" {...POP}>

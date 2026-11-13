@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { BackIcon, CloseIcon } from './icons'
+import { BackIcon } from './icons'
 import { detectPlace } from './location'
 import { parseScan } from './scan'
 import { readPhoto } from './vision'
@@ -299,7 +299,7 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
 
       <div className="flow-top">
         <button className="flow-icon" aria-label={step === 0 ? 'Cancel' : 'Back'} onClick={back}>
-          {step === 0 ? <CloseIcon size={18} /> : <BackIcon />}
+          <BackIcon />
         </button>
 
         <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={STEPS.length} aria-valuenow={step + 1}>
