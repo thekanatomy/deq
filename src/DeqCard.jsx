@@ -270,6 +270,10 @@ function DeqCard({ person, interactive = true, open = true }) {
                   <i aria-hidden="true" />
                   {next.label}
                   {next.detail && <span> · {next.detail}</span>}
+                  {/* a small chevron: this line opens something, like a row in iPhone Settings */}
+                  <svg className="xcard-when-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M9.5 5.5 16 12l-6.5 6.5" />
+                  </svg>
                 </button>
                 {points.length > 0 && <p className="xcard-about">{points.slice(0, 3).join(' · ')}</p>}
               </div>

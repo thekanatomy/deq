@@ -5218,3 +5218,13 @@ html.sideways body {
 .reach-changes b { font-size: var(--size-body); }
 .reach-changes span { font-size: var(--size-callout); }
 .reach-changes small { color: var(--label-secondary); font-size: 0.8125rem; }
+
+/* the reach-out line can be tapped: a quiet chevron, and it dips when pressed */
+.xcard-when-chevron {
+  width: 0.85em;
+  height: 0.85em;
+  margin-left: 0.125rem;
+  opacity: 0.55;
+}
+.xcard-when { transition: transform 140ms var(--ease-out), opacity 140ms var(--ease-out); }
+.xcard-when:active { transform: scale(0.97); opacity: 0.75; }
