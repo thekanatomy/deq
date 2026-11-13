@@ -1353,9 +1353,7 @@ button {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: var(--zoom-glass);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  backdrop-filter: blur(20px) saturate(1.4);
+  background: var(--zoom-glass); /* no backdrop blur: the page behind is already a blur, and blurring it again while things move is what made it judder */
   transition: transform 160ms var(--ease-out), background 160ms var(--ease-out);
 }
 
@@ -4892,8 +4890,6 @@ html.sideways body {
   padding: 0.875rem 1rem;
   border-radius: 1.125rem;
   background: var(--zoom-glass);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  backdrop-filter: blur(20px) saturate(1.4);
 }
 .zoom-ring { flex: none; transform: rotate(-90deg); }
 .zoom-ring circle { fill: none; stroke-width: 6; }
@@ -5130,3 +5126,39 @@ html.sideways body {
   cursor: pointer;
 }
 .cropper-bar button.strong { font-weight: 700; }
+
+/* ---------- the ring around their photo: how the connection is doing ---------- */
+.avatar-ring {
+  position: relative;
+  flex: none;
+  display: inline-grid;
+  border-radius: 50%;
+}
+.avatar-ring.ring-ok .avatar { box-shadow: 0 0 0 0.6cqw #34c759; }
+.avatar-ring.ring-soon .avatar { box-shadow: 0 0 0 0.6cqw #ff9f0a; }
+.avatar-ring.ring-late .avatar { box-shadow: 0 0 0 0.6cqw #ff3b30; }
+.avatar-ring.ring-cold .avatar { box-shadow: 0 0 0 0.6cqw #8e8e93; }
+/* late: one soft ripple every couple of seconds. Only transform and opacity move, so it's
+   drawn by the graphics chip and costs next to nothing. */
+.avatar-ring.ring-late::after {
+  content: '';
+  position: absolute;
+  inset: -0.6cqw;
+  border: 0.6cqw solid #ff3b30;
+  border-radius: 50%;
+  animation: ring-ripple 2s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes ring-ripple {
+  from { transform: scale(1); opacity: 0.9; }
+  to { transform: scale(1.75); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar-ring.ring-late::after { animation: none; opacity: 0; }
+}
+
+/* the countdown after the label, quieter than it */
+.xcard-days-detail { opacity: 0.7; }
+
+/* gone cold: the card's colour drains away until you speak again */
+.xcard.cold { filter: saturate(0.15) brightness(0.8); }

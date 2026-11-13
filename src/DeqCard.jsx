@@ -87,7 +87,6 @@ function DeqCard({ person, interactive = true, open = true }) {
 
   const days = Math.floor((Date.now() - person.lastContacted) / DAY)
   const metAt = person.metAt ?? person.lastContacted
-  const daysLabel = days === 0 ? 'Today' : `${days} ${days === 1 ? 'day' : 'days'}`
   const next = nextStep(person, days)
   const points = talkingPoints(person.note)
 
@@ -125,9 +124,14 @@ function DeqCard({ person, interactive = true, open = true }) {
     setEditing(false)
   }
 
+  // how this connection is doing, as a ring around their photo:
+  // green on track, orange soon, red (rippling) late, grey gone cold
+  const status = person.followUpDays
+    ? next.late ? 'late' : next.soon ? 'soon' : 'ok'
+    : days > 60 ? 'cold' : days <= 30 ? 'ok' : 'none'
   const avatar = (
-    <span className="avatar">
-      {photoUrl ? <img src={photoUrl} alt="" /> : initials(person.name)}
+    <span className={`avatar-ring ring-${status}`}>
+      <span className="avatar">{photoUrl ? <img src={photoUrl} alt="" /> : initials(person.name)}</span>
     </span>
   )
 
@@ -137,7 +141,7 @@ function DeqCard({ person, interactive = true, open = true }) {
     <div className="xcard-shadow" aria-hidden="true" />
     <article
       ref={cardRef}
-      className="xcard"
+      className={!open && status === 'cold' ? 'xcard cold' : 'xcard'}
       style={{
         ...brandStyle(person.company),
         backgroundImage: `${grainImage()}, ${meshImage(person.company)}`,
@@ -280,9 +284,9 @@ function DeqCard({ person, interactive = true, open = true }) {
               <span className="xcard-company">{companyOf(person)}</span>
             </header>
             <h2 className="xcard-name">{person.name}</h2>
-            <p className="xcard-days">
-              {daysLabel}
-              {person.lastChannel && <span className="xcard-channel"> ({person.lastChannel})</span>}
+            <p className={status === 'late' ? 'xcard-days late' : 'xcard-days'}>
+              {next.label}
+              {next.detail && <span className="xcard-days-detail"> · {next.detail}</span>}
             </p>
           </motion.div>
         )}

@@ -146,8 +146,9 @@ export default function ZoomView({ person, onClose }) {
   const short = time => new Date(time).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 
   const item = index => ({
-    initial: { opacity: 0, y: 14 },
-    animate: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE, delay: 0.12 + index * 0.05 } },
+    // the details wait for the card to land, then rise in quickly: nothing competes with the flight
+    initial: { opacity: 0, y: 10 },
+    animate: { opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE, delay: 0.32 + Math.min(index, 4) * 0.04 } },
     exit: { opacity: 0, transition: { duration: 0.12 } },
   })
 
@@ -220,7 +221,7 @@ export default function ZoomView({ person, onClose }) {
               className="zoom-ring-fill"
               initial={{ pathLength: 0 }}
               animate={{ pathLength: fill }}
-              transition={{ type: 'spring', bounce: 0, duration: 1.1, delay: 0.35 }}
+              transition={{ type: 'spring', bounce: 0, duration: 1.1, delay: 0.6 }}
             />
           </svg>
           <div className="zoom-next-text">
