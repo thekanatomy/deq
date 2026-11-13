@@ -4770,42 +4770,64 @@ html.sideways body {
   cursor: pointer;
 }
 
-/* ---------- About: the maker's card ---------- */
-.maker-card {
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box; /* padding inside the width, so it never runs off the screen */
-  width: 100%;
-  max-width: 17.5rem;
-  aspect-ratio: 1 / 1.4; /* the same shape as a card in the deck */
-  margin-top: 1.5rem;
-  padding: 1.25rem;
-  border-radius: 1.75rem;
-  background-size: 96px 96px, cover;
-  color: var(--card-ink);
-  box-shadow: 0 24px 50px -20px rgba(0, 40, 120, 0.55);
+/* ---------- About: Apple's About screen ---------- */
+.about {
+  display: grid;
+  justify-items: center;
+  padding-top: 1rem;
+  text-align: center;
 }
-.maker-label {
-  font-size: var(--size-callout);
-  font-weight: 700;
-  color: var(--card-ink-soft);
+.about-icon {
+  width: 88px;
+  height: 88px;
+  border-radius: 22.5%; /* the iOS app icon corner */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.08);
 }
-.maker-bottom { margin-top: auto; }
-.maker-name {
-  margin: 0;
-  font-size: 2rem;
+.about-name {
+  margin: 1rem 0 0;
+  color: var(--label);
+  font-size: 1.75rem;
   font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.04em;
 }
-.maker-line {
-  margin: 0.5rem 0 0;
+.about-version {
+  margin: 0.125rem 0 0;
+  color: var(--label-secondary);
+  font-size: var(--size-callout);
+}
+.about-text {
+  max-width: 20rem;
+  margin: 1.25rem 0 0;
+  color: var(--label-secondary);
   font-size: var(--size-body);
-  font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.45;
 }
-.maker-place {
-  margin: 0.75rem 0 0;
+/* inset grouped list, like Settings */
+.about-group {
+  width: 100%;
+  margin: 2rem 0 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border-radius: 0.875rem;
+  background: var(--surface);
+  text-align: left;
+}
+.about-group li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-left: 1rem;
+  padding: 0.8rem 1rem 0.8rem 0;
+  font-size: var(--size-body);
+}
+.about-group li + li { border-top: 0.5px solid var(--separator, rgba(128, 128, 128, 0.25)); }
+.about-group li span:first-child { color: var(--label); }
+.about-group li span:last-child { color: var(--label-secondary); text-align: right; }
+.about-foot {
+  max-width: 18rem;
+  margin: 1.25rem 0 0;
+  color: var(--label-secondary);
   font-size: 0.8125rem;
-  color: var(--card-ink-soft);
+  line-height: 1.4;
 }

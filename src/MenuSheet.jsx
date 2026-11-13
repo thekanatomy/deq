@@ -1,7 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { BackIcon, CloseIcon } from './icons'
-import { brandStyle, grainImage, meshImage } from './brands'
 import SignIn from './SignIn'
 import { accountsEnabled, setBackup, signOut, syncNow, useAccount } from './sync'
 
@@ -166,11 +165,28 @@ export default function MenuSheet({ count, onMyCard, onClose }) {
               )
             )}
             {page === 'about' && (
-              <>
-                <h2 className="menu-title">About Deq</h2>
-                <p className="menu-text">Deq keeps the people you meet as cards, and shows how long it has been since you last spoke.</p>
-                <MakerCard />
-              </>
+              // Apple's About screens: the icon, the name, one line, then a short grouped list
+              <div className="about">
+                <img className="about-icon" src="/icon-192.png" alt="" width="88" height="88" />
+                <h2 className="about-name">deq</h2>
+                <p className="about-version">Version 1.0</p>
+                <p className="about-text">Deq keeps the people you meet as cards, and shows how long it has been since you last spoke.</p>
+                <ul className="about-group">
+                  <li>
+                    <span>Made by</span>
+                    <span>Kanish Goudam</span>
+                  </li>
+                  <li>
+                    <span>From</span>
+                    <span>Arizona State University</span>
+                  </li>
+                  <li>
+                    <span>Website</span>
+                    <span>deq.one</span>
+                  </li>
+                </ul>
+                <p className="about-foot">Just a helping hand, helping people live their lives.</p>
+              </div>
             )}
           </motion.section>
         )}
@@ -196,22 +212,3 @@ function syncLabel({ status, lastSynced, backup }) {
   return 'Backed up'
 }
 
-// The maker, as a deq card: just a name and a line, no contact details.
-function MakerCard() {
-  return (
-    <motion.div
-      className="maker-card"
-      style={{ ...brandStyle(''), backgroundImage: `${grainImage()}, ${meshImage('')}` }}
-      initial={{ opacity: 0, y: 24, rotate: -2 }}
-      animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={{ type: 'spring', bounce: 0.25, duration: 0.8, delay: 0.15 }}
-    >
-      <span className="maker-label">Made by</span>
-      <div className="maker-bottom">
-        <p className="maker-name">Kanish Goudam</p>
-        <p className="maker-line">Just a helping hand, helping people live their lives.</p>
-        <p className="maker-place">Arizona State University</p>
-      </div>
-    </motion.div>
-  )
-}
