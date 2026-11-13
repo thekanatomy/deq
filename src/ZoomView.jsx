@@ -128,8 +128,13 @@ export default function ZoomView({ person, onClose }) {
   ].filter(Boolean)
 
   // more, further down
+  // contacts filled in from "How did you reach them?" become one-tap buttons here
+  const phone = person.phone?.replace(/[^\d+]/g, '')
   const more = [
     person.linkedin && mail && { id: 'mail', label: 'Mail', icon: <MailIcon />, href: mail },
+    person.instagram && { id: 'instagram', label: 'Instagram', icon: <InstagramIcon />, href: `https://instagram.com/${person.instagram.replace(/^@/, '')}` },
+    phone && { id: 'message', label: 'Message', icon: <BubbleIcon />, href: `sms:${phone}` },
+    phone && { id: 'whatsapp', label: 'WhatsApp', icon: <BubbleIcon />, href: `https://wa.me/${phone.replace(/^\+/, '')}` },
     { id: 'calendar', label: 'Calendar', icon: <CalendarPlusIcon />, run: () => setChoosing(true) },
     { id: 'contact', label: 'Save Contact', icon: <PersonPlusIcon />, run: saveContact },
     { id: 'share', label: 'Share', icon: <ShareIcon />, run: share },
@@ -378,6 +383,18 @@ const Svg = ({ children }) => (
   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     {children}
   </svg>
+)
+const InstagramIcon = () => (
+  <Svg>
+    <rect x="4" y="4" width="16" height="16" rx="5" />
+    <circle cx="12" cy="12" r="3.6" />
+    <circle cx="16.8" cy="7.2" r="0.6" fill="currentColor" />
+  </Svg>
+)
+const BubbleIcon = () => (
+  <Svg>
+    <path d="M20 11.5a7.5 7 0 0 1-11 6.2L4.5 19l1.3-3.6A7 7 0 1 1 20 11.5Z" />
+  </Svg>
 )
 const MailIcon = () => (
   <Svg>
