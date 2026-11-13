@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { isIOS } from './browser'
 
 // The phone's own Back (Android's back gesture or button, the browser's back
 // arrow) closes whatever is open in deq, one layer at a time, instead of leaving
@@ -33,6 +34,10 @@ function takeBack() {
 
 // While `open` is true, Back calls `close`. Change `step` to give Back another
 // stop inside the same layer (each question of the add flow, say).
+// iPhone keeps its normal web Back: Safari's own swipe can't be matched smoothly,
+// so only Android (and other browsers) get the layer-by-layer Back.
+const enabled = !isIOS
+
 export function useBack(open, close, step = 0) {
   const closeRef = useRef(close)
   useEffect(() => {
@@ -40,7 +45,7 @@ export function useBack(open, close, step = 0) {
   })
 
   useEffect(() => {
-    if (!open) return undefined
+    if (!enabled || !open) return undefined
     const layer = {
       backed: false,
       close() {
