@@ -5375,3 +5375,27 @@ html.sideways body {
 .privacy-group li { display: grid; gap: 0.25rem; padding: 0.8rem 1rem 0.8rem 0; }
 .about-group.privacy-group li b { color: var(--label); font-size: var(--size-body); font-weight: 600; }
 .about-group.privacy-group li span:last-child { color: var(--label-secondary); font-size: 0.9375rem; line-height: 1.4; text-align: left; }
+
+/* "Reach out again?" after logging a conversation */
+.reach-again {
+  flex: 1;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 0.75rem;
+  padding: 0 1.5rem calc(env(safe-area-inset-bottom) + 4rem);
+  text-align: center;
+}
+.reach-again-tick {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 0.5rem;
+  border-radius: 50%;
+  background: #34c759;
+  color: #fff;
+  font-size: 1.75rem;
+  font-weight: 800;
+}
+.reach-again .reach-in { margin-bottom: 1.25rem; font-size: 1.0625rem; }

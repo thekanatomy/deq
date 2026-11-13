@@ -31,13 +31,16 @@ export default function ReachOut({ person, onClose }) {
   const current = person.followUpDays ? startOfDay(person.lastContacted + person.followUpDays * DAY) : new Date(today.getTime() + 7 * DAY)
   const [date, setDate] = useState(current < today ? new Date(today.getTime() + DAY) : current)
   const [note, setNote] = useState(person.next ?? '')
+  // after "I already spoke…": ask whether to plan the next time, before showing the dates again
+  const [again, setAgain] = useState(false)
+  const [spokeAt, setSpokeAt] = useState(null)
   const changes = (person.history ?? []).filter(entry => entry.type === 'plan').reverse()
   const years = [today.getFullYear(), today.getFullYear() + 1]
   const inDays = Math.round((date - today) / DAY)
 
   async function save() {
     const due = date.getTime()
-    const followUpDays = Math.max(1, Math.ceil((due - startOfDay(person.lastContacted).getTime()) / DAY))
+    const followUpDays = Math.max(1, Math.ceil((due - startOfDay(spokeAt ?? person.lastContacted).getTime()) / DAY))
     const history = [...(person.history ?? []), { type: 'plan', at: Date.now(), due, note: note.trim() }].slice(-30)
     await db.cards.update(person.id, { followUpDays, next: note.trim(), history })
     navigator.vibrate?.(12)
@@ -45,8 +48,23 @@ export default function ReachOut({ person, onClose }) {
   }
 
   async function spokeToday() {
-    await db.cards.update(person.id, spokeNow(person, person.lastChannel ?? 'In person'))
+    const changes = spokeNow(person, person.lastChannel ?? 'In person')
+    await db.cards.update(person.id, changes)
     navigator.vibrate?.(12)
+    setSpokeAt(changes.lastContacted)
+    setAgain(true)
+  }
+
+  // "Reach out again?" Yes: back to the dates, starting a week from today, with a fresh note
+  function planAgain() {
+    setDate(new Date(today.getTime() + 7 * DAY))
+    setNote('')
+    setAgain(false)
+  }
+
+  // No: no reminder for now; they stay in your deq, quietly
+  async function noReminder() {
+    await db.cards.update(person.id, { followUpDays: null, next: '' })
     onClose()
   }
 
@@ -69,6 +87,26 @@ export default function ReachOut({ person, onClose }) {
         </button>
       </div>
 
+      {again ? (
+        <motion.div
+          className="reach-again"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
+        >
+          <span className="reach-again-tick" aria-hidden="true">
+            ✓
+          </span>
+          <h2 className="reach-title">Nice, logged for today</h2>
+          <p className="reach-in">Do you want to reach out to {first} again?</p>
+          <button className="primary-button" onClick={planAgain}>
+            Yes, pick a date
+          </button>
+          <button className="flow-skip reach-spoke" onClick={noReminder}>
+            No, not for now
+          </button>
+        </motion.div>
+      ) : (
       <div className="reach-scroll">
         <h2 className="reach-title">Reach out to {first}</h2>
         <p className="reach-date">{date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
@@ -105,9 +143,11 @@ export default function ReachOut({ person, onClose }) {
         <button className="primary-button" onClick={save}>
           Save
         </button>
-        <button className="flow-skip reach-spoke" onClick={spokeToday}>
-          I already spoke to {first} today
-        </button>
+        {!spokeAt && (
+          <button className="flow-skip reach-spoke" onClick={spokeToday}>
+            I already spoke to {first} today
+          </button>
+        )}
 
         {changes.length > 0 && (
           <section className="reach-changes">
@@ -124,6 +164,7 @@ export default function ReachOut({ person, onClose }) {
           </section>
         )}
       </div>
+      )}
     </motion.div>,
     document.body,
   )
