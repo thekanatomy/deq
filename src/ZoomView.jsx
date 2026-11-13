@@ -44,6 +44,13 @@ export default function ZoomView({ person, onClose }) {
   const days = Math.floor((Date.now() - person.lastContacted) / DAY)
   const due = followUpWindow(person)
   const [spoke, setSpoke] = useState(false)
+  // the mini map is heavy (a whole map engine): load it only after the card has
+  // finished flying up, so the flight never stutters
+  const [settled, setSettled] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(true), 900)
+    return () => clearTimeout(timer)
+  }, [])
 
   // tilt follows the pointer on the card only, softened by a spring
   const pointerX = useMotionValue(0)
@@ -269,7 +276,7 @@ export default function ZoomView({ person, onClose }) {
           <motion.section className="zoom-block" {...item(5)}>
             <p className="zoom-label">Where you met</p>
             <button className="zoom-map" onClick={showOnMap} aria-label={`Show ${person.place} on the map`}>
-              {person.lat != null && person.lng != null && (
+              {settled && person.lat != null && person.lng != null && (
                 <Suspense fallback={null}>
                   <MiniMap lat={person.lat} lng={person.lng} />
                 </Suspense>
