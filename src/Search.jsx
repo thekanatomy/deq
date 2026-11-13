@@ -4,6 +4,7 @@ import { meshImage } from './brands'
 import { placeOf } from './filters'
 import DateWheel from './Wheel.jsx'
 import Forgot from './Forgot'
+import { talkingPoints } from './history'
 import { CloseIcon, SearchIcon } from './icons'
 import { companyOf, roleOf } from './text'
 
@@ -223,7 +224,8 @@ export default function Search({ people, startScope = 'All', focusId = null, onO
                     <span className="chev" aria-hidden="true">›</span>
                   </button>
                 )}
-                {newest.length > 0 && (
+                {scope === 'Name' && <NameHelp people={people} onOpen={open} />}
+                {scope !== 'Name' && newest.length > 0 && (
                   <section className="search-section">
                     <p className="search-heading">Recently met</p>
                     <div className="face-row">
@@ -237,7 +239,7 @@ export default function Search({ people, startScope = 'All', focusId = null, onO
                   </section>
                 )}
 
-                {places.length > 0 && (
+                {scope !== 'Name' && places.length > 0 && (
                   <section className="search-section">
                     <p className="search-heading">Places</p>
                     <div className="chip-wrap">
@@ -250,6 +252,7 @@ export default function Search({ people, startScope = 'All', focusId = null, onO
                   </section>
                 )}
 
+                {scope !== 'Name' && (
                 <section className="search-section">
                   <p className="search-heading">When</p>
                   <div className="chip-wrap">
@@ -260,6 +263,7 @@ export default function Search({ people, startScope = 'All', focusId = null, onO
                     ))}
                   </div>
                 </section>
+                )}
 
                 {recent.length > 0 && (
                   <section className="search-section">
@@ -332,6 +336,113 @@ export default function Search({ people, startScope = 'All', focusId = null, onO
         {forgetting && <Forgot key="forgot" people={people} onOpenPerson={onOpenPerson} onClose={() => setForgetting(false)} />}
       </AnimatePresence>
     </motion.div>
+  )
+}
+
+// Name search when the name won't come: the first letter, their face, or the
+// thing you remember them by. Only letters someone's name starts with can be tapped.
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+function NameHelp({ people, onOpen }) {
+  const [letter, setLetter] = useState(null)
+  const [hook, setHook] = useState(null)
+  const [company, setCompany] = useState(null)
+  const initials = useMemo(() => new Set(people.map(person => person.name.trim()[0]?.toUpperCase())), [people])
+  const faces = useMemo(() => people.filter(person => person.photo).slice(0, 12), [people])
+  const hooks = useMemo(() => {
+    const counts = new Map()
+    for (const person of people) for (const point of talkingPoints(person.note)) counts.set(point, (counts.get(point) ?? 0) + 1)
+    return [...counts].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([point]) => point)
+  }, [people])
+
+  const byLetter = letter ? people.filter(person => person.name.trim()[0]?.toUpperCase() === letter) : []
+  const byHook = hook ? people.filter(person => talkingPoints(person.note).includes(hook)) : []
+  // most cards have no photo, but almost all have a company: the colours jog the memory
+  const companies = useMemo(() => {
+    const counts = new Map()
+    for (const person of people) {
+      const name = companyOf(person)
+      if (name) counts.set(name, (counts.get(name) ?? 0) + 1)
+    }
+    return [...counts].sort((a, b) => b[1] - a[1]).slice(0, 8)
+  }, [people])
+  const byCompany = company ? people.filter(person => companyOf(person) === company) : []
+
+  return (
+    <>
+      <section className="search-section">
+        <p className="search-heading">It starts with…</p>
+        <div className="letter-pad">
+          {LETTERS.map(char => (
+            <button
+              key={char}
+              className={letter === char ? 'on' : ''}
+              disabled={!initials.has(char)}
+              aria-pressed={letter === char}
+              onClick={() => setLetter(current => (current === char ? null : char))}
+            >
+              {char}
+            </button>
+          ))}
+        </div>
+        {byLetter.map(person => (
+          <PersonRow key={person.id} person={person} words={[]} onOpen={onOpen} showDate />
+        ))}
+      </section>
+
+      {companies.length > 0 && (
+        <section className="search-section">
+          <p className="search-heading">Where they work or study</p>
+          <div className="company-tiles">
+            {companies.map(([name, count]) => (
+              <button
+                key={name}
+                className={company === name ? 'company-tile on' : 'company-tile'}
+                style={{ backgroundImage: meshImage(name) }}
+                aria-pressed={company === name}
+                onClick={() => setCompany(current => (current === name ? null : name))}
+              >
+                <b>{name}</b>
+                <small>{count === 1 ? '1 person' : `${count} people`}</small>
+              </button>
+            ))}
+          </div>
+          {byCompany.map(person => (
+            <PersonRow key={person.id} person={person} words={[]} onOpen={onOpen} showDate />
+          ))}
+        </section>
+      )}
+
+      {/* faces only help once there are a few of them */}
+      {faces.length >= 4 && (
+        <section className="search-section">
+          <p className="search-heading">You’d know their face</p>
+          <div className="face-grid">
+            {faces.map(person => (
+              <button key={person.id} className="face-chip" onClick={() => onOpen(person)}>
+                <Avatar person={person} size={64} />
+                <span>{person.name.split(' ')[0]}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {hooks.length > 0 && (
+        <section className="search-section">
+          <p className="search-heading">You remember them as…</p>
+          <div className="chip-wrap">
+            {hooks.map(point => (
+              <button key={point} className={hook === point ? 'search-chip on' : 'search-chip'} onClick={() => setHook(current => (current === point ? null : point))}>
+                {point}
+              </button>
+            ))}
+          </div>
+          {byHook.map(person => (
+            <PersonRow key={person.id} person={person} words={[]} onOpen={onOpen} showDate />
+          ))}
+        </section>
+      )}
+    </>
   )
 }
 

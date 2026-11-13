@@ -5473,3 +5473,42 @@ html.sideways body {
   cursor: pointer;
 }
 .forgot-card.partial { opacity: 0.6; }
+
+/* ---------- Name search: first letter, faces, memory hooks ---------- */
+.letter-pad { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.375rem; margin-bottom: 0.75rem; }
+.letter-pad button {
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--surface);
+  color: var(--label);
+  font: inherit;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out), background 150ms var(--ease-out);
+}
+.letter-pad button:active:not(:disabled) { transform: scale(0.92); }
+.letter-pad button:disabled { background: none; color: var(--label-secondary); opacity: 0.35; cursor: default; }
+.letter-pad button.on { background: var(--label); color: var(--bg); }
+.face-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem 0.5rem; }
+.search-chip.on { background: var(--label); color: var(--bg); }
+.company-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.625rem; margin-bottom: 0.75rem; }
+.company-tile {
+  display: grid;
+  align-content: end;
+  min-height: 5.5rem;
+  padding: 0.75rem 0.875rem;
+  border: 0;
+  border-radius: 1rem;
+  background-size: cover;
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out), box-shadow 150ms var(--ease-out);
+}
+.company-tile:active { transform: scale(0.97); }
+.company-tile.on { box-shadow: 0 0 0 3px var(--label); }
+.company-tile b { font-size: 1.0625rem; font-weight: 700; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35); }
+.company-tile small { font-size: 0.8125rem; opacity: 0.85; }
