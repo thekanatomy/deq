@@ -46,6 +46,9 @@ if (import.meta.env.PROD) {
   })
 }
 
+// which version is running, for checking a phone: open the browser's console
+console.info(`deq build ${__BUILD__}`)
+
 // Shows the error on screen instead of a blank page.
 class ErrorScreen extends Component {
   state = { error: null }

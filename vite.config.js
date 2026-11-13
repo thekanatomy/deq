@@ -73,4 +73,6 @@ function devApi() {
 export default defineConfig({
   plugins: [react(), basicSsl(), devApi()],
   server: { host: true },
+  // which version is running, shown in About: the commit Vercel built from
+  define: { __BUILD__: JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA || 'dev').slice(0, 7)) },
 })
