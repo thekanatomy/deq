@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { BackIcon } from './icons'
+import { CloseIcon } from './icons'
 import { detectPlace } from './location'
 import { parseScan } from './scan'
 import { readPhoto } from './vision'
@@ -12,12 +12,14 @@ import { openReminder } from './calendar'
 import ScanReading from './ScanReading'
 import NoteBuilder from './NoteBuilder'
 import { useBack } from './back'
+import { busy, clearDraft, saveDraft } from './draft'
 
-// Adding someone in a few taps, one question at a time. Names come from the QR or a
-// pasted LinkedIn link, the place comes from your location, two sliders replace typing,
-// and the only thing you write is what you talked about. A photo of a card, badge or
-// LinkedIn screen is read by the AI while the flow opens, and fills the answers in.
-// Apple-style: white screen, centred question, one blue button at the bottom.
+const MiniMap = lazy(() => import('./MiniMap.jsx'))
+
+// Adding someone on one screen, stacked like Airbnb's search: one card open at a time,
+// the rest are slim rows showing their answer. Names come from the QR, a pasted LinkedIn
+// link or a photo the AI reads; the place comes from your location and shows on a map.
+// After a scan the stack opens and closes card by card to show what it filled in.
 const VIBES = ['Quick hello', 'Nice chat', 'Good conversation', 'Really clicked', 'Must stay in touch']
 const FOLLOW_UPS = [
   { days: 3, label: 'in 3 days' },
@@ -48,37 +50,18 @@ function rememberCalendar(id) {
   }
 }
 
-// the slider stop closest to a number of days
-function nearestFollowUp(days) {
-  if (!days) return FOLLOW_UPS.length - 1
-  let best = 0
-  FOLLOW_UPS.forEach((option, index) => {
-    if (option.days && Math.abs(option.days - days) < Math.abs(FOLLOW_UPS[best].days - days)) best = index
-  })
-  return best
-}
-
 const SOURCES = { card: 'their card', badge: 'their badge', screen: 'the screen', person: 'the photo', other: 'the photo' }
 
-const STEPS = [
-  { key: 'name', question: 'Who did you meet?', hint: 'Type a name, or paste their LinkedIn link.', required: true },
-  { key: 'work', question: 'Where do they work?', hint: 'Their company, and role if you know it.' },
-  { key: 'place', question: 'Where are you?', hint: 'So you remember where you met.' },
-  { key: 'vibe', question: 'How did it go?' },
-  { key: 'followUp', question: 'When should you reach out?', hint: 'Deq will remind you.' },
-  // the memory hook: one thing that makes this person easy to picture again
-  { key: 'note', question: 'What stood out?', hint: 'Something to remember them by.' },
-  // what to do when you reach out: shows on their card as "Next time"
-  { key: 'next', question: 'Anything for next time?', hint: 'What to bring up when you reach out.' },
-]
-
-export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, onClose }) {
+export default function AddFlow({ initial: given, recentPlaces, placeCoords, onSave, onClose }) {
+  // coming back to a half-added person after the phone closed the app
+  const { _restored: restored, ...initial } = given
   const [fields, setFields] = useState({
     name: '',
     role: '',
     company: '',
     place: '',
     linkedin: '',
+    phone: '',
     email: '',
     note: '',
     next: '',
@@ -87,21 +70,49 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
     remindWith: lastCalendar(), // add it to this calendar once the card is saved
     ...initial,
   })
-  const skipped = { name: Boolean(initial.name), work: Boolean(initial.company) }
-  const [step, setStep] = useState(() => STEPS.findIndex(s => !skipped[s.key]))
-  const [direction, setDirection] = useState(1)
+  // one card open at a time, Airbnb-style
+  const [open, setOpen] = useState(restored || 'who')
   const [locating, setLocating] = useState(initial.place ? 'idle' : 'finding') // idle | finding | found | failed | blocked | elsewhere
   const needsReading = Boolean(initial.scanImage) && !(initial.name && initial.company)
   const [reading, setReading] = useState(needsReading ? 'reading' : 'idle') // idle | reading | done | read | failed | busy
   const [readFrom, setReadFrom] = useState('')
   const inputRef = useRef(null)
   const foundRef = useRef(null) // the place the phone found, to switch back to
-  const stepRef = useRef(step)
+  const nameRef = useRef(null)
   const fieldsRef = useRef(fields)
   useEffect(() => {
-    stepRef.current = step
     fieldsRef.current = fields
   })
+
+  // After a scan, the stack opens and closes card by card to show what was filled in,
+  // then settles on the first thing only you can answer. Any touch stops it at once.
+  const magicRef = useRef([])
+  const [magic, setMagic] = useState(false)
+  function stopMagic() {
+    magicRef.current.forEach(clearTimeout)
+    magicRef.current = []
+    setMagic(false)
+  }
+  function playMagic() {
+    stopMagic()
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return setOpen('vibe')
+    setMagic(true)
+    const beats = [['who', 0], ['where', 1300], ['vibe', 2600]]
+    magicRef.current = beats.map(([key, at], index) =>
+      setTimeout(() => {
+        setOpen(key)
+        if (index === beats.length - 1) setMagic(false)
+      }, at),
+    )
+  }
+  useEffect(() => () => magicRef.current.forEach(clearTimeout), [])
+  // scanned from a QR code or a LinkedIn link: the answers are already here
+  useEffect(() => {
+    if (!initial.name || initial.scanImage || restored) return
+    const start = setTimeout(playMagic, 450) // once the sheet has slid up
+    return () => clearTimeout(start)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Find their face in the scan at the same time as the AI reads it: a face becomes
   // the avatar, cut out like a profile picture.
@@ -147,11 +158,7 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
       navigator.vibrate?.(15)
       advance = setTimeout(() => {
         setReading('read')
-        // still on the first question and it's answered now: move on by itself
-        if (stepRef.current === 0 && filled.name) {
-          setDirection(1)
-          setStep(filled.company ? 2 : 1)
-        }
+        playMagic()
       }, 1900) // long enough for the card to land
     })
     return () => {
@@ -191,14 +198,8 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
 
   // while the photo is read, typing waits: the answers are about to fill in
   const waiting = reading === 'reading' || reading === 'done'
-  useEffect(() => {
-    if (!waiting) inputRef.current?.focus({ preventScroll: true })
-  }, [waiting])
-
-  const current = STEPS[step]
-  const isLast = step === STEPS.length - 1
   const hasName = fields.name.trim().length > 0
-  const canContinue = !current.required || hasName
+  const [pickingDate, setPickingDate] = useState(false)
 
   // Ask for location as soon as the flow opens, so it's ready by the time you get there.
   useEffect(() => {
@@ -218,10 +219,6 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
     }
   }, [initial.place])
 
-  useEffect(() => {
-    inputRef.current?.focus({ preventScroll: true })
-  }, [step])
-
   function set(key, value) {
     setFields(previous => ({ ...previous, [key]: value }))
   }
@@ -239,48 +236,139 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
     const clean = Object.fromEntries(
       Object.entries(kept).map(([key, entry]) => [key, typeof entry === 'string' ? entry.trim() : entry]),
     )
+    clearDraft()
     onSave(clean)
     // Google Calendar opens right here, inside the tap on Add, after the save has
     // started: phones only let a tap open another app, and a wait would lose it.
     if (clean.remindWith && clean.followUpDays) openReminder({ ...clean, lastContacted: Date.now() }, clean.remindWith)
   }
 
-  function go(to) {
-    setDirection(to > step ? 1 : -1)
-    setStep(to)
-  }
-
-  function next() {
-    if (!canContinue) return
-    if (isLast) return save()
-    go(step + 1)
-  }
-
-  function back() {
-    if (step === 0) return onClose()
-    go(step - 1)
-  }
-
-  // the phone's Back goes to the previous question, and from the first one closes the flow
-  useBack(true, back, step)
-
-  function onKeyDown(event) {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault()
-      next()
+  // keep the half-added person on the phone, so leaving the app loses nothing
+  useEffect(() => {
+    busy.adding = true
+    return () => {
+      busy.adding = false
     }
+  }, [])
+  useEffect(() => {
+    const touched = ['name', 'phone', 'company', 'role', 'note', 'next'].some(key => String(fields[key] ?? '').trim())
+    if (!touched) return
+    const timer = setTimeout(() => saveDraft(fields, open), 250)
+    return () => clearTimeout(timer)
+  }, [fields, open])
+
+  function close() {
+    clearDraft()
+    onClose()
   }
 
-  const followIndex = nearestFollowUp(fields.followUpDays)
+  // an empty name card gets the keyboard straight away
+  useEffect(() => {
+    if (open === 'who' && !waiting && !fieldsRef.current.name) nameRef.current?.focus({ preventScroll: true })
+  }, [open, waiting])
+
+  // the phone's Back closes the flow
+  useBack(true, close)
+
+  // Enter moves to the next card, like Return on a form
+  const ORDER = ['who', 'where', 'vibe', 'followUp', 'note', 'next']
+  function onKeyDown(event) {
+    if (event.key !== 'Enter' || event.shiftKey) return
+    event.preventDefault()
+    if (open === 'who' && !hasName) return
+    // next field in the same card first, then the next card
+    const inputs = [...(event.currentTarget.closest('.stack-body')?.querySelectorAll('input') ?? [])]
+    const nextInput = inputs[inputs.indexOf(event.currentTarget) + 1]
+    if (nextInput) return nextInput.focus()
+    const after = ORDER[ORDER.indexOf(open) + 1]
+    if (after) openCard(after)
+    else event.currentTarget.blur()
+  }
+
+  function openCard(key) {
+    stopMagic()
+    setOpen(previous => (previous === key ? null : key))
+    // once it has opened, glide it into view if it's below the fold
+    setTimeout(() => document.querySelector(`[data-card="${key}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 380)
+  }
+
+  function tryAdd() {
+    if (hasName) return save()
+    stopMagic()
+    flushSync(() => setOpen('who'))
+    nameRef.current?.focus()
+  }
+
+  function clearAll() {
+    stopMagic()
+    setFields(previous => ({
+      ...previous,
+      name: '', role: '', company: '', linkedin: '', phone: '', email: '', note: '', next: '',
+      photo: undefined, vibe: 3, followUpDays: 7,
+      ...(foundRef.current ?? { place: '', lat: undefined, lng: undefined }),
+    }))
+    setLocating(foundRef.current ? 'found' : locating)
+    flushSync(() => setOpen('who'))
+    nameRef.current?.focus()
+  }
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const reachOn = new Date(today.getTime() + (fields.followUpDays ?? 7) * DAY)
   const wheelYears = [today.getFullYear(), today.getFullYear() + 1]
 
+  const firstName = fields.name.trim().split(' ')[0]
+  const followLabel = fields.followUpDays
+    ? FOLLOW_UPS.find(option => option.days === fields.followUpDays)?.label ??
+      reachOn.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+    : 'No reminder'
+  const scannedFrom = reading === 'read' ? readFrom : initial.name && !restored ? (initial.linkedin ? 'LinkedIn' : 'their code') : ''
+
+  // One card of the stack: a slim row with its answer when closed, the question and
+  // its fields when open. Only the body changes height, so nothing stretches.
+  function card(id, label, question, value, body) {
+    const isOpen = open === id
+    return (
+      <section className={isOpen ? 'stack-card open' : 'stack-card'} key={id} data-card={id}>
+        {/* the header keeps its height either way; only its words cross-fade */}
+        <button className={isOpen ? 'stack-head open' : 'stack-head'} onClick={() => openCard(id)} aria-expanded={isOpen}>
+          <motion.span
+            key={isOpen ? 'question' : 'row'}
+            className="stack-head-in"
+            initial={{ opacity: 0, y: isOpen ? 6 : -4, scale: isOpen ? 0.97 : 1.02 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: 'spring', bounce: 0, duration: 0.42 }}
+          >
+            {isOpen ? (
+              <h3>{question}</h3>
+            ) : (
+              <>
+                <span>{label}</span>
+                <b className={value ? undefined : 'stack-empty'}>{value || 'Add'}</b>
+              </>
+            )}
+          </motion.span>
+        </button>
+        <AnimatePresence initial={false}>
+          {isOpen && (
+            <motion.div
+              className="stack-body-clip"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ type: 'spring', bounce: 0, duration: 0.5, opacity: { duration: 0.2 } }}
+            >
+              <div className="stack-body">{body}</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </section>
+    )
+  }
+
   return (
     <motion.div
-      // picking a place: the list takes the room, everything else steps aside for the keyboard
-      className={placeOptions.length > 0 && current.key === 'place' ? 'flow picking' : 'flow'}
+      className={magic ? 'flow stacked magic' : 'flow stacked'}
       // from a scan, the frozen photo replaces the camera in place; otherwise slide up
       initial={needsReading ? false : { y: '100%' }}
       animate={{ y: 0 }}
@@ -298,283 +386,252 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
         )}
       </AnimatePresence>
 
-      <div className="flow-top">
-        <button className="flow-icon" aria-label={step === 0 ? 'Cancel' : 'Back'} onClick={back}>
-          <BackIcon />
+      <div className="stack-top">
+        <h2>Add someone</h2>
+        <button className="flow-icon" aria-label="Close" onClick={close}>
+          <CloseIcon />
         </button>
-
-        <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={STEPS.length} aria-valuenow={step + 1}>
-          <motion.div
-            className="progress-fill"
-            animate={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
-            transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
-          />
-        </div>
-
-        <button className="flow-save" disabled={!hasName || waiting} onClick={save}>Save</button>
       </div>
 
-
-      <div className="flow-stage">
-        <AnimatePresence mode="popLayout" initial={false} custom={direction}>
-          <motion.div
-            key={current.key}
-            className="question"
-            custom={direction}
-            variants={{
-              enter: dir => ({ y: dir * 32, opacity: 0, filter: 'blur(4px)' }),
-              center: { y: 0, opacity: 1, filter: 'blur(0px)' },
-              leave: dir => ({ y: dir * -32, opacity: 0, filter: 'blur(4px)', transition: { duration: 0.18 } }),
-            }}
-            initial="enter"
-            animate="center"
-            exit="leave"
-            transition={{ type: 'spring', bounce: 0, duration: 0.3 }}
-          >
-            {reading === 'read' && current.key !== 'name' && (step === 1 || step === 2) ? (
-              <p className="flow-scanned">Read {fields.name} from {readFrom}</p>
-            ) : (
-              initial.name && current.key !== 'name' && step === STEPS.findIndex(s => !skipped[s.key]) && (
-                <p className="flow-scanned">Scanned {initial.name}{initial.linkedin ? ' from LinkedIn' : ''}</p>
-              )
-            )}
-            <h2 className="question-text">{current.question}</h2>
-            {current.hint && <p className="question-hint">{current.hint}</p>}
-
-            {current.key === 'name' && (
-              <>
-                <input
-                  ref={inputRef}
-                  className={waiting ? 'answer waiting' : 'answer'}
-                  placeholder={waiting ? 'Reading the photo…' : 'Name'}
-                  readOnly={waiting}
-                  aria-busy={waiting}
-                  autoCapitalize="words"
-                  autoCorrect="off"
-                  enterKeyHint="next"
-                  value={fields.name}
-                  onChange={event => onNameChange(event.target.value)}
-                  onKeyDown={onKeyDown}
-                />
-                {reading === 'failed' && <p className="answer-hint">Couldn’t read a name from the photo.</p>}
-                {reading === 'busy' && <p className="answer-hint">Photo reading is busy right now. Type the name for this one.</p>}
-                {fields.linkedin && <p className="answer-hint">LinkedIn linked ✓</p>}
-              </>
-            )}
-
-            {current.key === 'work' && (
-              <div className="answer-group">
-                <input
-                  ref={inputRef}
-                  className="answer"
-                  placeholder="Company"
-                  autoCapitalize="words"
-                  enterKeyHint="next"
-                  value={fields.company}
-                  onChange={event => set('company', event.target.value)}
-                  onKeyDown={onKeyDown}
-                />
-                <input
-                  className="answer small"
-                  placeholder="Role (optional)"
-                  enterKeyHint="next"
-                  value={fields.role}
-                  onChange={event => set('role', event.target.value)}
-                  onKeyDown={onKeyDown}
-                />
-              </div>
-            )}
-
-            {current.key === 'place' && (
-              <>
-                <div className="place-status" aria-live="polite">
-                  <PinIcon />
-                  {locating === 'finding' && !fields.place ? 'Finding where you are…' : null}
-                  {locating === 'failed' && !fields.place ? 'Couldn’t find your location' : null}
-                  {locating === 'blocked' && !fields.place ? 'Location is off for deq. Type the place, or allow it in your browser’s site settings.' : null}
-                  {locating === 'elsewhere' && !fields.place ? 'Where did you meet?' : null}
-                  {fields.place && (locating === 'found' ? 'Found you here' : 'Here')}
-                </div>
-                <input
-                  ref={inputRef}
-                  className="answer"
-                  placeholder={locating === 'elsewhere' ? 'Career Fair, Hayden Library…' : 'Memorial Union'}
-                  enterKeyHint="next"
-                  value={fields.place}
-                  onChange={event => {
-                    const place = event.target.value
-                    // a typed place has no coordinates until one is picked from the list
-                    setFields(previous => ({ ...previous, place, lat: undefined, lng: undefined }))
-                    setPlaceTyped(true)
-                  }}
-                  onKeyDown={onKeyDown}
-                  autoComplete="off"
-                  aria-autocomplete="list"
-                  aria-controls="place-options"
-                />
-                <AnimatePresence>
-                  {placeOptions.length > 0 && (
-                    <motion.ul
-                      id="place-options"
-                      className="place-options"
-                      role="listbox"
-                      initial={{ opacity: 0, y: -6, filter: 'blur(4px)' }}
-                      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                      exit={{ opacity: 0, y: -4, transition: { duration: 0.15 } }}
-                      transition={{ type: 'spring', bounce: 0, duration: 0.35 }}
-                    >
-                      {placeOptions.map(option => (
-                        <li key={option.place} role="option" aria-selected="false">
-                          <button onMouseDown={event => event.preventDefault()} onClick={() => pickPlace(option)}>
-                            <PinIcon />
-                            <span>
-                              <b>{option.name}</b>
-                              {option.detail && <small>{option.detail}</small>}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </motion.ul>
-                  )}
-                </AnimatePresence>
-                {/* the phone knows where you are now, not always where you met.
-                    One button that stays put and flips, so tapping it never loses the keyboard. */}
-                {(locating === 'found' || locating === 'elsewhere') && foundRef.current && (
-                  <button
-                    className="flow-skip place-elsewhere"
-                    onMouseDown={event => event.preventDefault()}
-                    onClick={() => {
-                      if (locating === 'elsewhere') {
-                        setFields(previous => ({ ...previous, ...foundRef.current }))
-                        setLocating('found')
-                        return
-                      }
-                      flushSync(() => {
-                        setFields(previous => ({ ...previous, place: '', lat: undefined, lng: undefined }))
-                        setLocating('elsewhere')
-                      })
-                      inputRef.current?.focus()
-                    }}
-                  >
-                    {locating === 'elsewhere' ? `Use ${foundRef.current.place.split(',')[0]}` : 'Met somewhere else?'}
-                  </button>
-                )}
-                {recentPlaces.length > 0 && (
-                  <div className="suggestions">
-                    {recentPlaces
-                      .filter(place => place !== fields.place)
-                      .map(place => (
-                        <button key={place} className="suggestion" onClick={() => pickPlace({ place, ...placeCoords?.[place] })}>
-                          {place}
-                        </button>
-                      ))}
-                  </div>
-                )}
-              </>
-            )}
-
-            {current.key === 'vibe' && (
-              <div className="slider-block">
-                <Face value={fields.vibe} colour={VIBE_COLOURS[fields.vibe - 1]} />
-                <p className="slider-value">{VIBES[fields.vibe - 1]}</p>
-                <input
-                  ref={inputRef}
-                  className="slider vibe"
-                  style={{ '--fill': `${((fields.vibe - 1) / 4) * 100}%`, '--vibe': VIBE_COLOURS[fields.vibe - 1] }}
-                  type="range"
-                  min="1"
-                  max="5"
-                  step="1"
-                  value={fields.vibe}
-                  aria-valuetext={VIBES[fields.vibe - 1]}
-                  onChange={event => set('vibe', Number(event.target.value))}
-                  onKeyDown={onKeyDown}
-                />
-                <div className="slider-ends">
-                  <span>Quick hello</span>
-                  <span>Stay in touch</span>
-                </div>
-              </div>
-            )}
-
-            {current.key === 'followUp' && (
-              <div className="slider-block reach-block">
-                {/* the date, the wheels and the slider all move together */}
-                <p className="slider-value big">
-                  {fields.followUpDays
-                    ? reachOn.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long' })
-                    : 'No reminder'}
-                </p>
-                <div className={fields.followUpDays ? 'reach-wheel' : 'reach-wheel off'}>
-                  <DateWheel
-                    value={reachOn}
-                    years={wheelYears}
-                    onChange={date => {
-                      const days = Math.round((date.getTime() - today.getTime()) / DAY)
-                      set('followUpDays', Math.max(1, days))
-                    }}
-                  />
-                </div>
-                <input
-                  ref={inputRef}
-                  className="slider"
-                  style={{ '--fill': `${(followIndex / (FOLLOW_UPS.length - 1)) * 100}%` }}
-                  type="range"
-                  min="0"
-                  max={FOLLOW_UPS.length - 1}
-                  step="1"
-                  value={followIndex}
-                  aria-valuetext={FOLLOW_UPS[followIndex].label}
-                  onChange={event => set('followUpDays', FOLLOW_UPS[Number(event.target.value)].days)}
-                  onKeyDown={onKeyDown}
-                />
-                <div className="slider-ends">
-                  <span>Soon</span>
-                  <span>{FOLLOW_UPS[followIndex].days ? FOLLOW_UPS[followIndex].label : 'No reminder'}</span>
-                  <span>Later</span>
-                </div>
-                {fields.followUpDays && (
-                  <div className="remind-with">
-                    <p>Remind me in</p>
-                    <div className="remind-options">
-                      {[{ id: null, short: 'Just deq' }, { id: 'google', short: 'Google Calendar' }].map(option => (
-                        <button
-                          key={option.id ?? 'none'}
-                          className={fields.remindWith === option.id ? 'remind-option active' : 'remind-option'}
-                          onClick={() => {
-                            set('remindWith', option.id)
-                            rememberCalendar(option.id)
-                          }}
-                        >
-                          {option.short}
-                        </button>
-                      ))}
-                    </div>
-                    {fields.remindWith && <small>Opens when you add {fields.name.split(' ')[0] || 'them'} to your deq.</small>}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {current.key === 'next' && (
-              <textarea
-                ref={inputRef}
-                className="answer note"
-                rows={3}
-                placeholder="Send my portfolio, ask about the Seattle team…"
-                value={fields.next}
-                onChange={event => set('next', event.target.value)}
+      <div className="stack" onPointerDown={() => magic && stopMagic()}>
+        {card(
+          'who',
+          'Who',
+          'Who did you meet?',
+          fields.name.trim() && (
+            <>
+              {fields.photo && <img className="stack-avatar" src={fields.photo} alt="" />}
+              {fields.name.trim()}
+            </>
+          ),
+          <>
+            {scannedFrom && <p className="stack-scanned">Filled in from {scannedFrom}</p>}
+            <input
+              ref={nameRef}
+              className={fields.name ? 'stack-field filled' : 'stack-field'}
+              placeholder={waiting ? 'Reading the photo…' : 'Name, or paste their LinkedIn link'}
+              readOnly={waiting}
+              aria-busy={waiting}
+              autoCapitalize="words"
+              autoCorrect="off"
+              autoComplete="off"
+              enterKeyHint="next"
+              value={fields.name}
+              onChange={event => onNameChange(event.target.value)}
+              onKeyDown={onKeyDown}
+            />
+            {/* the most common swap in person: "here's my number" */}
+            <input
+              className={fields.phone ? 'stack-field filled' : 'stack-field'}
+              type="tel"
+              inputMode="tel"
+              autoComplete="off"
+              placeholder="Phone number (optional)"
+              enterKeyHint="next"
+              value={fields.phone ?? ''}
+              onChange={event => set('phone', event.target.value)}
+              onKeyDown={onKeyDown}
+            />
+            <div className="stack-pair">
+              <input
+                className={fields.role ? 'stack-field filled' : 'stack-field'}
+                placeholder="Role"
+                enterKeyHint="next"
+                value={fields.role}
+                onChange={event => set('role', event.target.value)}
                 onKeyDown={onKeyDown}
               />
+              <input
+                className={fields.company ? 'stack-field filled' : 'stack-field'}
+                placeholder="Company"
+                autoCapitalize="words"
+                enterKeyHint="next"
+                value={fields.company}
+                onChange={event => set('company', event.target.value)}
+                onKeyDown={onKeyDown}
+              />
+            </div>
+            {reading === 'failed' && <p className="stack-note">Couldn’t read a name from the photo.</p>}
+            {reading === 'busy' && <p className="stack-note">Photo reading is busy right now. Type the name for this one.</p>}
+            {fields.linkedin && <p className="stack-note ok-note">LinkedIn linked ✓</p>}
+          </>,
+        )}
+
+        {card(
+          'where',
+          'Where',
+          'Where did you meet?',
+          fields.place ? fields.place.split(',')[0] : locating === 'finding' ? 'Finding…' : '',
+          <>
+            {fields.lat != null && fields.lng != null && (
+              <div className="stack-map">
+                <LaterMap lat={fields.lat} lng={fields.lng} />
+                {locating === 'found' && fields.place === foundRef.current?.place && <span className="stack-map-tag">You’re here</span>}
+              </div>
             )}
+            {!fields.place && (
+              <p className="stack-note quiet">
+                {locating === 'finding' && 'Finding where you are…'}
+                {locating === 'failed' && 'Couldn’t find your location. Type the place.'}
+                {locating === 'blocked' && 'Location is off for deq. Type the place, or allow it in your browser’s site settings.'}
+              </p>
+            )}
+            <input
+              ref={inputRef}
+              className={fields.place ? 'stack-field filled' : 'stack-field'}
+              placeholder="Career Fair, Hayden Library…"
+              enterKeyHint="next"
+              value={fields.place}
+              onChange={event => {
+                const place = event.target.value
+                // a typed place has no coordinates until one is picked from the list
+                setFields(previous => ({ ...previous, place, lat: undefined, lng: undefined }))
+                setPlaceTyped(true)
+                setLocating(locating === 'found' ? 'elsewhere' : locating)
+              }}
+              onKeyDown={onKeyDown}
+              autoComplete="off"
+              aria-autocomplete="list"
+              aria-controls="place-options"
+            />
+            {placeOptions.length > 0 && (
+              <ul id="place-options" className="place-options stack-options" role="listbox">
+                {placeOptions.map(option => (
+                  <li key={option.place} role="option" aria-selected="false">
+                    <button onMouseDown={event => event.preventDefault()} onClick={() => pickPlace(option)}>
+                      <PinIcon />
+                      <span>
+                        <b>{option.name}</b>
+                        {option.detail && <small>{option.detail}</small>}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="stack-chips">
+              {foundRef.current && fields.place !== foundRef.current.place && (
+                <button
+                  className="stack-chip"
+                  onClick={() => {
+                    setFields(previous => ({ ...previous, ...foundRef.current }))
+                    setLocating('found')
+                  }}
+                >
+                  <PinIcon /> {foundRef.current.place.split(',')[0]}
+                </button>
+              )}
+              {recentPlaces
+                .filter(place => place !== fields.place && place !== foundRef.current?.place)
+                .slice(0, 4)
+                .map(place => (
+                  <button key={place} className="stack-chip" onClick={() => pickPlace({ place, ...placeCoords?.[place] })}>
+                    {place.split(',')[0]}
+                  </button>
+                ))}
+            </div>
+          </>,
+        )}
 
-            {current.key === 'note' && <NoteBuilder value={fields.note} onChange={note => set('note', note)} />}
+        {card(
+          'vibe',
+          'How it went',
+          'How did it go?',
+          VIBES[fields.vibe - 1],
+          <div className="stack-chips">
+            {VIBES.map((vibe, index) => (
+              <button
+                key={vibe}
+                className={fields.vibe === index + 1 ? 'stack-chip on' : 'stack-chip'}
+                style={{ '--dot': VIBE_COLOURS[index] }}
+                onClick={() => {
+                  set('vibe', index + 1)
+                  navigator.vibrate?.(6)
+                }}
+              >
+                <i className="stack-dot" aria-hidden="true" />
+                {vibe}
+              </button>
+            ))}
+          </div>,
+        )}
 
-          </motion.div>
-        </AnimatePresence>
+        {card(
+          'followUp',
+          'Reach out',
+          'When should you reach out?',
+          followLabel.charAt(0).toUpperCase() + followLabel.slice(1),
+          <>
+            <div className="stack-chips">
+              {FOLLOW_UPS.map(option => (
+                <button
+                  key={option.label}
+                  className={fields.followUpDays === option.days ? 'stack-chip on' : 'stack-chip'}
+                  onClick={() => set('followUpDays', option.days)}
+                >
+                  {option.label.charAt(0).toUpperCase() + option.label.slice(1)}
+                </button>
+              ))}
+            </div>
+            {fields.followUpDays && (
+              <>
+                <button className="stack-date" onClick={() => setPickingDate(value => !value)} aria-expanded={pickingDate}>
+                  <span>{reachOn.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                  <small>{pickingDate ? 'Done' : 'Change'}</small>
+                </button>
+                {pickingDate && (
+                  <div className="reach-wheel">
+                    <DateWheel
+                      value={reachOn}
+                      years={wheelYears}
+                      onChange={date => {
+                        const days = Math.round((date.getTime() - today.getTime()) / DAY)
+                        set('followUpDays', Math.max(1, days))
+                      }}
+                    />
+                  </div>
+                )}
+                <div className="stack-remind">
+                  <span>Remind me in</span>
+                  <div className="remind-options">
+                    {[{ id: null, short: 'Just deq' }, { id: 'google', short: 'Google Calendar' }].map(option => (
+                      <button
+                        key={option.id ?? 'none'}
+                        className={fields.remindWith === option.id ? 'remind-option active' : 'remind-option'}
+                        onClick={() => {
+                          set('remindWith', option.id)
+                          rememberCalendar(option.id)
+                        }}
+                      >
+                        {option.short}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {fields.remindWith && <p className="stack-note quiet">Opens when you add {firstName || 'them'} to your deq.</p>}
+              </>
+            )}
+          </>,
+        )}
+
+        {card('note', 'Stood out', 'What stood out?', fields.note, <NoteBuilder value={fields.note} onChange={note => set('note', note)} />)}
+
+        {card(
+          'next',
+          'Next time',
+          'Anything for next time?',
+          fields.next,
+          <textarea
+            className={fields.next ? 'stack-field note filled' : 'stack-field note'}
+            rows={3}
+            placeholder="Send my portfolio, ask about the Seattle team…"
+            value={fields.next}
+            onChange={event => set('next', event.target.value)}
+          />,
+        )}
       </div>
 
-      <div className="flow-actions">
+      <div className="stack-bar">
         <AnimatePresence mode="wait" initial={false}>
           {waiting ? (
             <motion.div
@@ -582,9 +639,9 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
               className="flow-reading"
               role="status"
               aria-live="polite"
-              initial={{ opacity: 0, scale: 0.92, filter: 'blur(6px)' }}
-              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-              exit={{ opacity: 0, scale: 0.96, filter: 'blur(6px)' }}
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
               transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
             >
               <ReadingRing done={reading === 'done'} />
@@ -595,26 +652,36 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
           ) : (
             <motion.div
               key="actions"
-              className="flow-buttons"
+              className="stack-actions"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={{ type: 'spring', bounce: 0, duration: 0.4 }}
             >
-              <button className="primary-button" disabled={!canContinue} onClick={next}>
-                {isLast ? 'Add to deq' : 'Continue'}
+              <button className="stack-clear" onClick={clearAll}>Clear all</button>
+              <button className={hasName ? 'stack-add' : 'stack-add off'} onClick={tryAdd}>
+                Add to deq
               </button>
-              {!current.required && !isLast && current.key !== 'vibe' && current.key !== 'followUp' ? (
-                <button className="flow-skip" onClick={next}>Skip</button>
-              ) : (
-                <span className="flow-skip placeholder" aria-hidden="true">Skip</span>
-              )}
             </motion.div>
           )}
         </AnimatePresence>
       </div>
     </motion.div>
   )
+}
+
+// The map waits until its card has finished opening, so the opening stays smooth.
+function LaterMap({ lat, lng }) {
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setReady(true), 380)
+    return () => clearTimeout(timer)
+  }, [])
+  return ready ? (
+    <Suspense fallback={null}>
+      <MiniMap lat={lat} lng={lng} colour="#0071e3" />
+    </Suspense>
+  ) : null
 }
 
 // Apple-style activity ring: an arc that breathes as it turns, then closes into a
@@ -646,36 +713,8 @@ function ReadingRing({ done }) {
   )
 }
 
-// A face whose smile follows the slider: flat at "quick hello", wide at "stay in touch".
 // Apple's system colours, red to green: how it went, at a glance.
 const VIBE_COLOURS = ['#FF3B30', '#FF9500', '#F2B600', '#A3D94B', '#34C759']
-
-function Face({ value, colour }) {
-  const curve = 13 + (value - 3) * 3.2 // control point of the mouth
-  return (
-    <motion.svg
-      className="face"
-      viewBox="0 0 64 64"
-      aria-hidden="true"
-      initial={false}
-      animate={{ color: colour }}
-      transition={{ duration: 0.35, ease: [0.32, 0.72, 0, 1] }}
-    >
-      <circle cx="32" cy="32" r="30" fill="currentColor" opacity="0.18" />
-      <circle cx="23" cy="26" r="3.2" fill="currentColor" />
-      <circle cx="41" cy="26" r="3.2" fill="currentColor" />
-      <motion.path
-        initial={false}
-        animate={{ d: `M20 ${40 - (value - 3) * 0.8} Q32 ${27 + curve} 44 ${40 - (value - 3) * 0.8}` }}
-        transition={{ type: 'spring', bounce: 0.3, duration: 0.35 }}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="3.2"
-        strokeLinecap="round"
-      />
-    </motion.svg>
-  )
-}
 
 function PinIcon() {
   return (

@@ -3,6 +3,7 @@ import { AnimatePresence, LayoutGroup, MotionConfig, motion } from 'motion/react
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import AddedMoment from './AddedMoment'
 import AddFlow from './AddFlow'
+import { readDraft } from './draft'
 import CardForm from './CardForm.jsx'
 import DeqCard from './DeqCard'
 import DetailsSheet from './DetailsSheet'
@@ -162,8 +163,10 @@ export default function App() {
     return () => window.removeEventListener('beforeinstallprompt', keep)
   }, [])
   // deck · scan (camera) · verify (check what the scan found) · form (type it in) · edit
-  const [view, setView] = useState('deck')
-  const [draft, setDraft] = useState({})
+  // a person half-added when the phone closed the app opens again where you left off
+  const [unfinished] = useState(readDraft)
+  const [view, setView] = useState(unfinished ? 'form' : 'deck')
+  const [draft, setDraft] = useState(unfinished ?? {})
   // opened from someone's Deq card (their Wallet pass QR or link): add them straight away
   useEffect(() => {
     const card = readCard(window.location.hash)

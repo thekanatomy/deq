@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/inter'
 import './index.css'
 import App from './App.jsx'
+import { busy } from './draft'
 
 // After a new version goes live, a tab opened earlier still asks for the old
 // version's files (the map, the scanner…), which no longer exist. Reload once to
@@ -39,7 +40,8 @@ if (import.meta.env.PROD) {
     try {
       const page = await fetch(`/?check=${Date.now()}`, { cache: 'no-store' }).then(response => response.text())
       const live = page.match(/src="(\/assets\/[^"]+\.js)"/)?.[1]
-      if (live && live !== running) window.location.reload()
+      // never in the middle of adding someone: it waits for the next time you come back
+      if (live && live !== running && !busy.adding) window.location.reload()
     } catch {
       // offline: keep using the version we have
     }

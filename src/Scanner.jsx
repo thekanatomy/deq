@@ -122,8 +122,6 @@ export default function Scanner({ onResult, onType, onClose }) {
       {/* no capture attribute, so the phone offers its photo library */}
       <input ref={galleryRef} type="file" accept="image/*" hidden onChange={fromFile} />
 
-      <div className="scanner-shade" />
-
       <div className="scanner-top">
         <button className="scanner-round" aria-label="Close scanner" onClick={onClose}>
           <CloseIcon />
@@ -161,17 +159,29 @@ export default function Scanner({ onResult, onType, onClose }) {
         )}
       </div>
 
+      {/* iOS Camera's bottom bar: photos on the left, the shutter, typing on the right */}
       <div className="scanner-bottom">
-        <button className="scanner-text" onClick={onType}>Type It</button>
+        <button className="scanner-side" aria-label="Choose from your photos" onClick={() => galleryRef.current.click()}>
+          <span className="scanner-round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="3.5" />
+              <circle cx="9" cy="10" r="1.6" />
+              <path d="m21 16-5-5-9 9" />
+            </svg>
+          </span>
+          <small>Photos</small>
+        </button>
         <button className="shutter" aria-label="Take a photo" onClick={capture}>
           <span />
         </button>
-        <button className="scanner-round gallery" aria-label="Choose from your photos" onClick={() => galleryRef.current.click()}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <rect x="3" y="4" width="18" height="16" rx="3.5" />
-            <circle cx="9" cy="10" r="1.6" />
-            <path d="m21 16-5-5-9 9" />
-          </svg>
+        <button className="scanner-side" aria-label="Type it in" onClick={onType}>
+          <span className="scanner-round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="2.5" y="6" width="19" height="12" rx="2.5" />
+              <path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M8 14h8" />
+            </svg>
+          </span>
+          <small>Type</small>
         </button>
       </div>
     </motion.div>

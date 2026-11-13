@@ -81,6 +81,7 @@ export default function ZoomView({ person, onClose }) {
       companyOf(person) && `ORG:${person.company}`,
       roleOf(person) && `TITLE:${person.role}`,
       person.email && `EMAIL:${person.email}`,
+      person.phone && `TEL;TYPE=CELL:${person.phone}`,
       person.linkedin && `URL:${linkedinUrl(person.linkedin)}`,
       `NOTE:${followUpText(person).replace(/\n/g, '\\n')}`,
       'END:VCARD',
@@ -133,6 +134,7 @@ export default function ZoomView({ person, onClose }) {
   const more = [
     person.linkedin && mail && { id: 'mail', label: 'Mail', icon: <MailIcon />, href: mail },
     person.instagram && { id: 'instagram', label: 'Instagram', icon: <InstagramIcon />, href: `https://instagram.com/${person.instagram.replace(/^@/, '')}` },
+    phone && { id: 'call', label: 'Call', icon: <PhoneIcon />, href: `tel:${phone}` },
     phone && { id: 'message', label: 'Message', icon: <BubbleIcon />, href: `sms:${phone}` },
     phone && { id: 'whatsapp', label: 'WhatsApp', icon: <BubbleIcon />, href: `https://wa.me/${phone.replace(/^\+/, '')}` },
     { id: 'calendar', label: 'Calendar', icon: <CalendarPlusIcon />, run: () => setChoosing(true) },
@@ -389,6 +391,11 @@ const InstagramIcon = () => (
     <rect x="4" y="4" width="16" height="16" rx="5" />
     <circle cx="12" cy="12" r="3.6" />
     <circle cx="16.8" cy="7.2" r="0.6" fill="currentColor" />
+  </Svg>
+)
+const PhoneIcon = () => (
+  <Svg>
+    <path d="M6.6 3.5h2.6l1.4 4-2 1.3a11 11 0 0 0 6.6 6.6l1.3-2 4 1.4v2.6a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.6 5.7a2 2 0 0 1 2-2.2Z" />
   </Svg>
 )
 const BubbleIcon = () => (
