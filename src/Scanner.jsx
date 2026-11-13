@@ -21,6 +21,24 @@ function readQR(source, width, height, canvas) {
   return jsQR(image.data, size, size, { inversionAttempts: 'attemptBoth' })?.data ?? null
 }
 
+// How much the picture moved since the last look: a tiny grey copy of the frame,
+// compared pixel by pixel. A still hand barely changes it; a shaky one changes a lot.
+const SHAKE_SIZE = 32
+const SHAKY = 16 // average change per pixel (0-255) that blurs small print
+function movement(video, canvas, previous) {
+  canvas.width = SHAKE_SIZE
+  canvas.height = SHAKE_SIZE
+  const context = canvas.getContext('2d', { willReadFrequently: true })
+  context.drawImage(video, 0, 0, SHAKE_SIZE, SHAKE_SIZE)
+  const { data } = context.getImageData(0, 0, SHAKE_SIZE, SHAKE_SIZE)
+  const grey = new Uint8Array(SHAKE_SIZE * SHAKE_SIZE)
+  for (let i = 0; i < grey.length; i++) grey[i] = (data[i * 4] + data[i * 4 + 1] * 2 + data[i * 4 + 2]) >> 2
+  if (!previous) return { grey, change: 0 }
+  let total = 0
+  for (let i = 0; i < grey.length; i++) total += Math.abs(grey[i] - previous[i])
+  return { grey, change: total / grey.length }
+}
+
 const SCANNABLE = ['LinkedIn profile', 'Business card', 'Event badge', 'QR code', 'Screenshot']
 
 export default function Scanner({ onResult, onType, onClose }) {
@@ -31,6 +49,8 @@ export default function Scanner({ onResult, onType, onClose }) {
   const doneRef = useRef(false)
   const [status, setStatus] = useState('starting') // starting | live | unavailable
   const [found, setFound] = useState(false)
+  const [shaky, setShaky] = useState(false)
+  const shakeRef = useRef({ canvas: null, previous: null, rough: 0, calm: 0 })
 
   function finish(result) {
     if (doneRef.current) return
@@ -69,6 +89,20 @@ export default function Scanner({ onResult, onType, onClose }) {
           if (text) {
             const fields = parseScan(text)
             if (Object.keys(fields).length) return finish(fields)
+          }
+          // "Hold still" after two shaky looks in a row, gone after three calm ones
+          const shake = shakeRef.current
+          shake.canvas ??= document.createElement('canvas')
+          const { grey, change } = movement(video, shake.canvas, shake.previous)
+          shake.previous = grey
+          if (change > SHAKY) {
+            shake.rough += 1
+            shake.calm = 0
+            if (shake.rough === 2) setShaky(true)
+          } else {
+            shake.calm += 1
+            shake.rough = 0
+            if (shake.calm === 3) setShaky(false)
           }
         }
         timer = setTimeout(tick, SCAN_EVERY_MS)
@@ -154,7 +188,11 @@ export default function Scanner({ onResult, onType, onClose }) {
                 <li key={kind}>{kind}</li>
               ))}
             </ul>
-            <p className="scanner-tip">Hold it steady so the words are sharp</p>
+            {shaky ? (
+              <p className="scanner-steady" role="status">Hold still for a sharp scan</p>
+            ) : (
+              <p className="scanner-tip">Hold it steady so the words are sharp</p>
+            )}
           </div>
         )}
       </div>

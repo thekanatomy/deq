@@ -4654,12 +4654,10 @@ html.sideways body {
 
 .scan-reading-badge {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 58%;
+  inset: 0;
   display: grid;
-  justify-items: center;
-  gap: 0.5rem;
+  place-items: center;
+  pointer-events: none;
 }
 .scan-reading-word {
   font-size: 4.5rem;
@@ -4678,6 +4676,9 @@ html.sideways body {
   to { background-position: -100% 0; }
 }
 .scan-reading-label {
+  /* under the logo, without pushing the logo off centre */
+  position: absolute;
+  top: calc(50% + 3.25rem);
   color: rgba(255, 255, 255, 0.75);
   font-size: var(--size-callout);
   font-weight: 600;
@@ -4700,9 +4701,9 @@ html.sideways body {
 .scan-reading-card {
   position: absolute;
   left: 50%;
-  bottom: calc(env(safe-area-inset-bottom) + 2rem);
+  top: 50%;
   width: min(78%, 22rem);
-  margin-left: calc(min(78%, 22rem) / -2);
+  transform: translate(-50%, -50%);
   pointer-events: none;
 }
 
@@ -5710,8 +5711,9 @@ html.sideways body {
 }
 .scanner-side:first-child { justify-self: start; }
 .scanner-side:last-child { justify-self: end; }
-.scanner-side small { font-size: 0.75rem; font-weight: 500; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6); }
-.scanner-side .scanner-round { color: #fff; }
+.scanner-side small { font-size: 0.8125rem; font-weight: 500; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6); }
+.scanner-side .scanner-round { width: 58px; height: 58px; color: #fff; }
+.scanner-side .scanner-round svg { width: 27px; height: 27px; }
 .scanner-side:active .scanner-round { transform: scale(0.94); }
 
 /* the optional phone number under the name: smaller, so the name stays the question */
@@ -5828,3 +5830,12 @@ html.sideways body {
 @media (prefers-reduced-motion: reduce) {
   .stack-body > *, .flow.magic .stack-field.filled { animation: none; }
 }
+/* the phone is moving too much to read small print */
+.scanner-steady {
+  margin: 0; padding: 0.375rem 0.875rem; border-radius: 999px;
+  background: #ffd60a; color: #000; font-size: 0.875rem; font-weight: 600;
+  animation: steady-in 0.3s var(--ease-out);
+}
+@keyframes steady-in { from { opacity: 0; transform: scale(0.94); } }
+/* the glittering dots the new card forms out of (CardDust) */
+.card-dust { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }

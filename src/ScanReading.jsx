@@ -1,21 +1,21 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo } from 'react'
 import DeqCard from './DeqCard'
-import { companyOf, roleOf } from './text'
+import CardDust from './CardDust'
 
 const EASE = [0.32, 0.72, 0, 1]
+// slow in, slow out: the card eases into being rather than snapping
+const EASE_IN_OUT = [0.65, 0, 0.35, 1]
 
 // The moment people film: while the AI reads the photo, the shot freezes under a
-// sweep of light and a shimmering "deq". When the answer comes back, what it
-// found lifts off as glass pills and drops into their card, which lands with a bounce.
+// sweep of light and a shimmering "deq". When the answer comes back, their card
+// comes into existence in the middle, out of a field of glittering dots, like Wallet.
 // phase: 'reading' (waiting on the AI) | 'done' (found something, playing the payoff)
 export default function ScanReading({ image, phase, person }) {
   const url = useMemo(() => (image ? URL.createObjectURL(image) : null), [image])
   useEffect(() => () => url && URL.revokeObjectURL(url), [url])
   const done = phase === 'done'
 
-  const words = [person.name, roleOf(person), companyOf(person)].filter(Boolean).slice(0, 3)
-  const first = (person.name ?? '').split(/\s+/)[0]
   const card = { id: 'reading', linkedin: '', email: '', lastContacted: Date.now(), metAt: Date.now(), ...person }
 
   return (
@@ -44,58 +44,47 @@ export default function ScanReading({ image, phase, person }) {
           <motion.div
             key="badge"
             className="scan-reading-badge"
-            initial={{ opacity: 0, scale: 0.92, filter: 'blur(8px)' }}
-            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, scale: 1.08, filter: 'blur(10px)', transition: { duration: 0.3, ease: EASE } }}
-            transition={{ duration: 0.6, ease: EASE, delay: 0.2 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, scale: 1.08, filter: 'blur(10px)', transition: { duration: 0.35, ease: EASE_IN_OUT } }}
+            transition={{ duration: 0.3 }}
           >
-            <span className="scan-reading-word">deq</span>
-            <span className="scan-reading-label">Reading the photo…</span>
+            {/* the logo grows out of a blur into focus, right in the middle */}
+            <motion.span
+              className="scan-reading-word"
+              initial={{ opacity: 0, scale: 0.45, filter: 'blur(16px)' }}
+              animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+              transition={{ duration: 1.0, ease: EASE_IN_OUT, delay: 0.15 }}
+            >
+              deq
+            </motion.span>
+            <motion.span
+              className="scan-reading-label"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, ease: EASE_IN_OUT, delay: 0.9 }}
+            >
+              Reading the photo…
+            </motion.span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* the payoff: found words fly into the card */}
-      {done &&
-        words.map((word, index) => (
-          <motion.span
-            key={word + index}
-            className="scan-reading-chip"
-            style={{ top: `${36 + index * 7}%` }}
-            initial={{ opacity: 0, y: 12, scale: 0.9, x: '-50%' }}
-            animate={{
-              opacity: [0, 1, 1, 0],
-              y: [12, -10, 220 - index * 40, 240 - index * 40],
-              scale: [0.9, 1, 0.85, 0.6],
-              x: '-50%',
-            }}
-            transition={{ duration: 1.05, times: [0, 0.3, 0.8, 1], ease: EASE, delay: 0.1 + index * 0.1 }}
+      {/* Apple Wallet's "Adding Card": a field of glittering dots in the card's shape,
+          which dissolves as the real card comes into focus underneath */}
+      {done && (
+        <div className="scan-reading-card">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, filter: 'blur(8px)' }}
+            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            transition={{ duration: 1.1, ease: EASE_IN_OUT, delay: 0.45 }}
           >
-            {word}
-          </motion.span>
-        ))}
-
-      {done && (
-        <motion.div
-          className="scan-reading-card"
-          initial={{ y: '130%' }}
-          animate={{ y: 0 }}
-          transition={{ type: 'spring', bounce: 0.25, duration: 0.7, delay: 0.55 }}
-        >
-          <DeqCard person={card} interactive={false} />
-        </motion.div>
+            <DeqCard person={card} interactive={false} />
+          </motion.div>
+          <CardDust appearAt={80} appearFor={500} dissolveAt={650} dissolveFor={800} />
+        </div>
       )}
 
-      {done && (
-        <motion.p
-          className="scan-reading-done"
-          initial={{ opacity: 0, y: -8, scale: 0.94 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ type: 'spring', bounce: 0.3, duration: 0.5, delay: 0.95 }}
-        >
-          ✓ {first ? `Got ${first}` : 'Got it'}
-        </motion.p>
-      )}
     </motion.div>
   )
 }
