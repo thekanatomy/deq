@@ -5400,27 +5400,36 @@ html.sideways body {
 }
 .reach-again .reach-in { margin-bottom: 1.25rem; font-size: 1.0625rem; }
 
-/* ---------- "I forgot who someone is" ---------- */
+/* ---------- "Can't remember someone?": a plain Settings-style row ---------- */
 .forgot-entry {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   width: 100%;
   margin: 0 0 1.25rem;
-  padding: 0.875rem 1rem;
-  border: 1px solid rgba(94, 92, 230, 0.35);
-  border-radius: 1.125rem;
-  background: linear-gradient(120deg, rgba(94, 92, 230, 0.22), var(--surface) 70%);
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: 0.875rem;
+  background: var(--surface);
   color: var(--label);
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: transform 140ms var(--ease-out);
 }
-.forgot-entry:active { transform: scale(0.98); }
-.forgot-entry i { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: #5e5ce6; font-style: normal; font-size: 1.25rem; }
-.forgot-entry b { display: block; font-size: var(--size-body); font-weight: 600; }
-.forgot-entry small { display: block; margin-top: 0.125rem; color: var(--label-secondary); font-size: 0.8125rem; }
+.forgot-entry:active { background: rgba(128, 128, 128, 0.25); }
+.forgot-entry i {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px; /* the Settings icon shape */
+  background: #5856d6;
+  color: #fff;
+  font-style: normal;
+}
+.forgot-entry b { display: block; font-size: var(--size-body); font-weight: 400; }
+.forgot-entry small { display: block; margin-top: 0.0625rem; color: var(--label-secondary); font-size: 0.8125rem; }
 .forgot-entry .chev { margin-left: auto; color: var(--label-tertiary, #8e8e93); font-size: 1.25rem; }
 
 .forgot {
@@ -5512,3 +5521,75 @@ html.sideways body {
 .company-tile.on { box-shadow: 0 0 0 3px var(--label); }
 .company-tile b { font-size: 1.0625rem; font-weight: 700; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35); }
 .company-tile small { font-size: 0.8125rem; opacity: 0.85; }
+
+/* ---------- Place search: open the map, or pick a place ---------- */
+.place-map-tile {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  width: 100%;
+  margin: 0 0 1.25rem;
+  padding: 0.625rem 1rem 0.625rem 0.625rem;
+  border: 0;
+  border-radius: 1.125rem;
+  background: var(--surface);
+  color: var(--label);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 140ms var(--ease-out);
+}
+.place-map-tile:active { transform: scale(0.98); }
+/* a little drawn map: streets, a park, three pins */
+.place-map-art {
+  position: relative;
+  flex: none;
+  width: 76px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  background:
+    linear-gradient(115deg, transparent 46%, rgba(255, 255, 255, 0.85) 47%, rgba(255, 255, 255, 0.85) 51%, transparent 52%),
+    linear-gradient(20deg, transparent 58%, rgba(255, 255, 255, 0.7) 59%, rgba(255, 255, 255, 0.7) 62%, transparent 63%),
+    radial-gradient(circle at 78% 78%, #b9dfae 0 22%, transparent 23%),
+    #e9e5dc;
+}
+.place-map-art i {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #ff453a;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+@media (prefers-color-scheme: dark) {
+  .place-map-art { filter: invert(1) hue-rotate(180deg) brightness(0.92); }
+  .place-map-art i { filter: invert(1) hue-rotate(180deg); }
+}
+.place-map-text { display: grid; flex: 1; min-width: 0; }
+.place-map-text b { font-size: var(--size-body); font-weight: 400; }
+.place-map-text small { color: var(--label-secondary); font-size: 0.875rem; }
+.place-map-tile .chev { color: var(--label-tertiary, #8e8e93); font-size: 1.25rem; }
+
+.place-list { border-radius: 1rem; background: var(--surface); overflow: hidden; }
+.place-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 0;
+  background: none;
+  color: var(--label);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.place-row + .place-row { border-top: 1px solid rgba(128, 128, 128, 0.2); }
+.place-pin { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: rgba(255, 69, 58, 0.15); color: #ff453a; }
+.place-text { display: grid; flex: 1; min-width: 0; }
+.place-text b { font-size: var(--size-body); font-weight: 500; }
+.place-text small { color: var(--label-secondary); font-size: 0.875rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.place-count { color: var(--label-secondary); font-size: var(--size-body); font-variant-numeric: tabular-nums; }

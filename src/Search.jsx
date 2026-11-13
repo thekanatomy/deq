@@ -216,16 +216,24 @@ export default function Search({ people, startScope = 'All', focusId = null, onO
               <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2, ease: EASE }}>
                 {people.length > 1 && (
                   <button className="forgot-entry" onClick={() => setForgetting(true)}>
-                    <i aria-hidden="true">✨</i>
+                    <i aria-hidden="true">
+                      {/* a person with a question mark, SF Symbols style */}
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="9.5" cy="8" r="3.5" />
+                        <path d="M3 20a6.5 6.5 0 0 1 11.2-4.5" />
+                        <path d="M16.6 14.4a2.4 2.4 0 1 1 3.2 2.3c-.6.2-1 .7-1 1.3v.3M18.8 21h.01" />
+                      </svg>
+                    </i>
                     <span>
-                      <b>I forgot who someone is</b>
-                      <small>Answer a few taps and deq finds them</small>
+                      <b>Can’t remember someone?</b>
+                      <small>Find them by where, when or what stood out</small>
                     </span>
                     <span className="chev" aria-hidden="true">›</span>
                   </button>
                 )}
                 {scope === 'Name' && <NameHelp people={people} onOpen={open} />}
-                {scope !== 'Name' && newest.length > 0 && (
+                {scope === 'Place' && <PlaceHelp people={people} onMap={() => setScope('Map')} onPlace={place => search(place, 'Place')} />}
+                {scope !== 'Name' && scope !== 'Place' && newest.length > 0 && (
                   <section className="search-section">
                     <p className="search-heading">Recently met</p>
                     <div className="face-row">
@@ -239,7 +247,7 @@ export default function Search({ people, startScope = 'All', focusId = null, onO
                   </section>
                 )}
 
-                {scope !== 'Name' && places.length > 0 && (
+                {scope !== 'Name' && scope !== 'Place' && places.length > 0 && (
                   <section className="search-section">
                     <p className="search-heading">Places</p>
                     <div className="chip-wrap">
@@ -252,7 +260,7 @@ export default function Search({ people, startScope = 'All', focusId = null, onO
                   </section>
                 )}
 
-                {scope !== 'Name' && (
+                {scope !== 'Name' && scope !== 'Place' && (
                 <section className="search-section">
                   <p className="search-heading">When</p>
                   <div className="chip-wrap">
@@ -440,6 +448,63 @@ function NameHelp({ people, onOpen }) {
           {byHook.map(person => (
             <PersonRow key={person.id} person={person} words={[]} onOpen={onOpen} showDate />
           ))}
+        </section>
+      )}
+    </>
+  )
+}
+
+// Place search, simply: a map you can open, then every place you've met people,
+// with how many and who.
+function PlaceHelp({ people, onMap, onPlace }) {
+  const places = useMemo(() => {
+    const byPlace = new Map()
+    for (const person of people) {
+      const place = placeOf(person)
+      if (!place) continue
+      if (!byPlace.has(place)) byPlace.set(place, [])
+      byPlace.get(place).push(person)
+    }
+    return [...byPlace].sort((a, b) => b[1].length - a[1].length)
+  }, [people])
+
+  return (
+    <>
+      <button className="place-map-tile" onClick={onMap}>
+        <span className="place-map-art" aria-hidden="true">
+          <i style={{ left: '30%', top: '42%' }} />
+          <i style={{ left: '62%', top: '30%' }} />
+          <i style={{ left: '52%', top: '64%' }} />
+        </span>
+        <span className="place-map-text">
+          <b>Open the map</b>
+          <small>
+            {places.length} {places.length === 1 ? 'place' : 'places'} where you’ve met people
+          </small>
+        </span>
+        <span className="chev" aria-hidden="true">›</span>
+      </button>
+
+      {places.length > 0 && (
+        <section className="search-section">
+          <p className="search-heading">Where you’ve met people</p>
+          <div className="place-list">
+            {places.map(([place, here]) => (
+              <button key={place} className="place-row" onClick={() => onPlace(place)}>
+                <span className="place-pin" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 21s-6.5-5.6-6.5-11A6.5 6.5 0 0 1 18.5 10c0 5.4-6.5 11-6.5 11Z" />
+                    <circle cx="12" cy="10" r="2.3" />
+                  </svg>
+                </span>
+                <span className="place-text">
+                  <b>{place}</b>
+                  <small>{here.slice(0, 3).map(person => person.name.split(' ')[0]).join(', ')}{here.length > 3 ? ` +${here.length - 3}` : ''}</small>
+                </span>
+                <span className="place-count">{here.length}</span>
+              </button>
+            ))}
+          </div>
         </section>
       )}
     </>
