@@ -23,6 +23,7 @@ import InAppGate from './InAppGate'
 import HomeScreenSheet from './HomeScreenSheet'
 import { inAppBrowser, isAndroid, isIOS, isStandalone, recall, remember } from './browser'
 import { cameToCarry, copyDeck, markForCarry, pasteDeck } from './move'
+import { useBack } from './back'
 import ZoomView from './ZoomView.jsx'
 import { meshImage } from './brands'
 import { db, visible } from './db'
@@ -258,6 +259,20 @@ export default function App() {
     setOpenId(id)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+
+  // Back on the phone closes the top layer instead of leaving deq (the add flow handles its own steps)
+  useBack(Boolean(openId), () => closeCard())
+  useBack(zoomed, () => setZoomed(false))
+  useBack(detailsOpen, () => setDetailsOpen(false))
+  useBack(view === 'scan' || view === 'edit', () => setView('deck'))
+  useBack(menuOpen, () => setMenuOpen(false))
+  useBack(Boolean(searchOpen), () => setSearchOpen(false))
+  useBack(categoriesOpen, () => setCategoriesOpen(false))
+  useBack(insightsOpen, () => setInsightsOpen(false))
+  useBack(waitingOpen, () => setWaitingOpen(false))
+  useBack(installOpen, () => setInstallOpen(false))
+  useBack(myCardOpen, () => setMyCardOpen(false))
+  useBack(filterId !== 'all', () => setFilterId('all'))
 
   function closeCard() {
     setZoomed(false)

@@ -10,6 +10,7 @@ import { searchPlaces } from './places'
 import DateWheel from './Wheel.jsx'
 import { openReminder } from './calendar'
 import ScanReading from './ScanReading'
+import { useBack } from './back'
 
 // Adding someone in a few taps, one question at a time. Names come from the QR or a
 // pasted LinkedIn link, the place comes from your location, two sliders replace typing,
@@ -258,6 +259,9 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
     if (step === 0) return onClose()
     go(step - 1)
   }
+
+  // the phone's Back goes to the previous question, and from the first one closes the flow
+  useBack(true, back, step)
 
   function onKeyDown(event) {
     if (event.key === 'Enter' && !event.shiftKey) {
