@@ -520,12 +520,12 @@ export default function App() {
                     />
                   </motion.div>
                 )}
-                {/* a quiet hint under the open card, until you've used it a few times */}
+                {/* a quiet hint above the open card, until you've used it a few times */}
                 <AnimatePresence>
                   {selected && !zoomed && showZoomHint && (
                     <motion.p
                       className="card-hint"
-                      initial={{ opacity: 0, y: -4 }}
+                      initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0, transition: { delay: 0.45, duration: 0.4 } }}
                       exit={{ opacity: 0, transition: { duration: 0.15 } }}
                     >
