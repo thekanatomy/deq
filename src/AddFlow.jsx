@@ -66,6 +66,8 @@ const STEPS = [
   { key: 'followUp', question: 'When should you reach out?', hint: 'Deq will remind you.' },
   // the memory hook: one thing that makes this person easy to picture again
   { key: 'note', question: 'What stood out?', hint: 'Something to remember them by.' },
+  // what to do when you reach out: shows on their card as "Next time"
+  { key: 'next', question: 'Anything for next time?', hint: 'What to bring up when you reach out.' },
 ]
 
 export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, onClose }) {
@@ -77,6 +79,7 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
     linkedin: '',
     email: '',
     note: '',
+    next: '',
     vibe: 3,
     followUpDays: 7,
     remindWith: lastCalendar(), // add it to this calendar once the card is saved
@@ -546,6 +549,18 @@ export default function AddFlow({ initial, recentPlaces, placeCoords, onSave, on
                   </div>
                 )}
               </div>
+            )}
+
+            {current.key === 'next' && (
+              <textarea
+                ref={inputRef}
+                className="answer note"
+                rows={3}
+                placeholder="Send my portfolio, ask about the Seattle team…"
+                value={fields.next}
+                onChange={event => set('next', event.target.value)}
+                onKeyDown={onKeyDown}
+              />
             )}
 
             {current.key === 'note' && (

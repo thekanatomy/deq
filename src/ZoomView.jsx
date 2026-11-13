@@ -1,5 +1,6 @@
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from 'motion/react'
-import { useEffect, useState } from 'react'
+import { nextStep, spokeNow, talkingPoints, timelineOf } from './history'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { CALENDARS, followUpWindow, openReminder } from './calendar'
 import { brandStyle } from './brands'
 import { db } from './db'
@@ -27,6 +28,10 @@ function followUpText(person) {
     .filter(Boolean)
     .join('\n')
 }
+
+const MiniMap = lazy(() => import('./MiniMap.jsx'))
+const VIBES = ['Quick hello', 'Nice chat', 'Good conversation', 'Really clicked', 'Must stay in touch']
+const VIBE_COLOURS = ['#FF3B30', '#FF9500', '#F2B600', '#A3D94B', '#34C759']
 
 // The person, up close. The card flies up from the deck; under it, their details
 // (left-aligned, like Apple's contact cards) and round actions to stay in touch.
@@ -91,7 +96,7 @@ export default function ZoomView({ person, onClose }) {
   }
 
   async function spokeToday() {
-    await db.cards.update(person.id, { lastContacted: Date.now(), lastChannel: 'In person' })
+    await db.cards.update(person.id, spokeNow(person, 'In person'))
     setSpoke(true)
     navigator.vibrate?.(12)
   }
@@ -110,7 +115,6 @@ export default function ZoomView({ person, onClose }) {
     ? { id: 'linkedin', label: 'LinkedIn', icon: <LinkedInIcon />, href: linkedinUrl(person.linkedin) }
     : mail && { id: 'mail', label: 'Mail', icon: <MailIcon />, href: mail }
   const quick = [
-    { id: 'remind', label: 'Remind', icon: <BellIcon />, run: () => setChoosing(true) },
     { id: 'spoke', label: spoke ? 'Logged' : 'Spoke Today', icon: <CheckIcon />, run: spokeToday, done: spoke },
     message,
     person.place && { id: 'map', label: 'Map', icon: <PinIcon />, run: showOnMap },
@@ -124,22 +128,15 @@ export default function ZoomView({ person, onClose }) {
     { id: 'share', label: 'Share', icon: <ShareIcon />, run: share },
   ].filter(Boolean)
 
-  // first line: when they came into your deq. "Met" only when there's a place to have
-  // met them at; added from home (a LinkedIn screenshot, a typed contact) is just "Added".
-  const firstDate = new Date(person.metAt ?? person.lastContacted)
-  const firstDay = firstDate.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    ...(firstDate.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}),
-  })
-  const details = [
-    person.place
-      ? { label: 'Met', value: `${firstDay} · ${person.place.split(',')[0]}` }
-      : { label: 'Added', value: firstDay },
-    person.note && { label: 'Stood out', value: person.note },
-    { label: 'Last spoke', value: spoke || days === 0 ? 'Today' : `${days} ${days === 1 ? 'day' : 'days'} ago` },
-    { label: 'Reach out', value: due.start.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) },
-  ].filter(Boolean)
+  // ---------- what's on the page, top to bottom ----------
+  const next = nextStep(person, days)
+  const points = talkingPoints(person.note)
+  const timeline = timelineOf(person)
+  const vibe = person.vibe ? VIBES[person.vibe - 1] : null
+  // the ring fills from the last time you spoke to the day you should reach out
+  const fill = person.followUpDays ? Math.min(1, Math.max(0.04, (Date.now() - person.lastContacted) / (person.followUpDays * DAY))) : 0
+  const ringColour = next.late ? '#ff3b30' : next.soon ? '#ff9f0a' : '#34c759'
+  const short = time => new Date(time).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 
   const item = index => ({
     initial: { opacity: 0, y: 14 },
@@ -203,19 +200,102 @@ export default function ZoomView({ person, onClose }) {
           ))}
         </motion.div>
 
-        <motion.div className="zoom-group" {...item(2)}>
-          {details.map(row => (
-            <div key={row.label} className="zoom-row">
-              <span>{row.label}</span>
-              <p>{row.value}</p>
-            </div>
-          ))}
+        {/* 1 · the next step, with a ring that fills as the day gets close */}
+        <motion.div className="zoom-next" {...item(2)}>
+          <svg className="zoom-ring" viewBox="0 0 60 60" width="60" height="60" aria-hidden="true">
+            <circle cx="30" cy="30" r="25" pathLength="1" className="zoom-ring-track" />
+            <motion.circle
+              cx="30"
+              cy="30"
+              r="25"
+              pathLength="1"
+              stroke={ringColour}
+              className="zoom-ring-fill"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: fill }}
+              transition={{ type: 'spring', bounce: 0, duration: 1.1, delay: 0.35 }}
+            />
+          </svg>
+          <div className="zoom-next-text">
+            <b>{person.followUpDays ? (next.late ? 'Reach out now' : `Reach out ${short(next.due)}`) : 'No reminder yet'}</b>
+            <span>{person.followUpDays ? next.detail || 'today' : next.label}</span>
+          </div>
+          <button className="zoom-next-button" onClick={() => setChoosing(true)}>
+            Remind
+          </button>
         </motion.div>
 
-        <motion.p className="zoom-section" {...item(3)}>
+        {/* 2 · what to talk about */}
+        {(points.length > 0 || person.next) && (
+          <motion.section className="zoom-block" {...item(3)}>
+            <p className="zoom-label">Talk about</p>
+            {points.length > 0 && (
+              <div className="zoom-chips">
+                {points.map(point => (
+                  <span key={point}>{point}</span>
+                ))}
+              </div>
+            )}
+            {person.next && <p className="zoom-quote">Next time: {person.next}</p>}
+          </motion.section>
+        )}
+
+        {/* 3 · you and them, oldest first, then what's coming */}
+        <motion.section className="zoom-block" {...item(4)}>
+          <p className="zoom-label">You and {first}</p>
+          <ol className="zoom-timeline">
+            {timeline.map(entry => (
+              <li key={`${entry.type}-${entry.at}`}>
+                <i />
+                <b>{entry.type === 'met' ? (person.place ? `Met at ${person.place.split(',')[0]}` : 'Added to your deq') : entry.channel && entry.channel !== 'In person' ? `Spoke on ${entry.channel}` : 'Spoke'}</b>
+                <small>{short(entry.at)}</small>
+              </li>
+            ))}
+            {person.followUpDays && (
+              <li className={next.late ? 'future late' : 'future'}>
+                <i />
+                <b>Reach out</b>
+                <small>
+                  {short(next.due)}
+                  {next.detail ? ` · ${next.detail}` : ''}
+                </small>
+              </li>
+            )}
+          </ol>
+        </motion.section>
+
+        {/* 4 · where you met */}
+        {person.place && (
+          <motion.section className="zoom-block" {...item(5)}>
+            <p className="zoom-label">Where you met</p>
+            <button className="zoom-map" onClick={showOnMap} aria-label={`Show ${person.place} on the map`}>
+              {person.lat != null && person.lng != null && (
+                <Suspense fallback={null}>
+                  <MiniMap lat={person.lat} lng={person.lng} />
+                </Suspense>
+              )}
+              <span className="zoom-map-place">{person.place.split(',')[0]}</span>
+            </button>
+          </motion.section>
+        )}
+
+        {/* 5 · how it went */}
+        {vibe && (
+          <motion.section className="zoom-block" {...item(6)}>
+            <p className="zoom-label">How it went</p>
+            <div className="zoom-vibe" role="img" aria-label={vibe}>
+              {VIBES.map((name, index) => (
+                <i key={name} style={index < person.vibe ? { background: VIBE_COLOURS[person.vibe - 1] } : undefined} />
+              ))}
+            </div>
+            <p className="zoom-vibe-text">{vibe}</p>
+          </motion.section>
+        )}
+
+        <motion.p className="zoom-section" {...item(7)}>
           Stay in touch with {first}
         </motion.p>
-        <motion.div className="zoom-actions grid" {...item(4)}>
+        <motion.div className="zoom-actions grid" {...item(8)}>
           {more.map(action => (
             <Circle key={action.id} action={action} />
           ))}
@@ -290,12 +370,6 @@ const Svg = ({ children }) => (
   <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     {children}
   </svg>
-)
-const BellIcon = () => (
-  <Svg>
-    <path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15Z" />
-    <path d="M10 20.5a2.2 2.2 0 0 0 4 0" />
-  </Svg>
 )
 const MailIcon = () => (
   <Svg>

@@ -4,7 +4,6 @@ import DeqCard from './DeqCard'
 import { companyOf, roleOf } from './text'
 
 const EASE = [0.32, 0.72, 0, 1]
-const DAY = 24 * 60 * 60 * 1000
 
 // The moment people film: while the AI reads the photo, the shot freezes under a
 // sweep of light and a shimmering "deq". When the answer comes back, what it
@@ -17,7 +16,7 @@ export default function ScanReading({ image, phase, person }) {
 
   const words = [person.name, roleOf(person), companyOf(person)].filter(Boolean).slice(0, 3)
   const first = (person.name ?? '').split(/\s+/)[0]
-  const card = { id: 'reading', linkedin: '', email: '', lastContacted: Date.now() - DAY * 0, metAt: Date.now(), ...person }
+  const card = { id: 'reading', linkedin: '', email: '', lastContacted: Date.now(), metAt: Date.now(), ...person }
 
   return (
     <motion.div

@@ -289,6 +289,7 @@ export default function App() {
       ...withShortText(fields),
       metAt: now,
       lastContacted: now,
+      history: [{ type: 'met', at: now }],
     })
     setDraft({})
     setOpenId(null)

@@ -4,6 +4,7 @@ import { db } from './db'
 import { CloseIcon } from './icons'
 import { cascade } from './MenuSheet.jsx'
 import { companyOf, roleOf } from './text'
+import { spokeNow } from './history'
 
 const DAY = 24 * 60 * 60 * 1000
 const ROW = { type: 'spring', bounce: 0, duration: 0.45 }
@@ -68,15 +69,13 @@ export default function Waiting({ people, onOpenPerson, onClose }) {
   ].filter(option => option.id === 'all' || option.count > 0)
 
   // a chosen option that emptied out goes back to All
-  useEffect(() => {
-    if (!options.some(option => option.id === show)) setShow('all')
-  }, [options, show])
+  const active = options.some(option => option.id === show) ? show : 'all'
 
-  const shown = SECTIONS.filter(section => groups[section.id].length > 0 && (show === 'all' || show === section.id))
+  const shown = SECTIONS.filter(section => groups[section.id].length > 0 && (active === 'all' || active === section.id))
   const waitingCount = options[0].count
 
   async function spoke(person) {
-    await db.cards.update(person.id, { lastContacted: Date.now(), lastChannel: person.lastChannel ?? 'In person' })
+    await db.cards.update(person.id, spokeNow(person, person.lastChannel ?? 'In person'))
   }
   async function later(person) {
     // due again a week from today
@@ -121,8 +120,8 @@ export default function Waiting({ people, onOpenPerson, onClose }) {
               <button
                 key={option.id}
                 role="tab"
-                aria-selected={show === option.id}
-                className={show === option.id ? 'waiting-option active' : 'waiting-option'}
+                aria-selected={active === option.id}
+                className={active === option.id ? 'waiting-option active' : 'waiting-option'}
                 onClick={() => setShow(option.id)}
               >
                 {option.name}

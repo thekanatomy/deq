@@ -3,10 +3,10 @@ import { AnimatePresence, motion } from 'motion/react'
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { brandStyle, grainImage, meshImage } from './brands'
 import { db } from './db'
-import { PlusIcon } from './icons'
 import { shrinkPhoto } from './photo'
 import { readPhoto } from './vision'
 import { companyOf, roleOf } from './text'
+import { nextStep, spokeNow, talkingPoints } from './history'
 
 const DAY = 24 * 60 * 60 * 1000
 const CHANNELS = ['In person', 'LinkedIn', 'Mail', 'Text']
@@ -87,6 +87,8 @@ function DeqCard({ person, interactive = true, open = true }) {
   const days = Math.floor((Date.now() - person.lastContacted) / DAY)
   const metAt = person.metAt ?? person.lastContacted
   const daysLabel = days === 0 ? 'Today' : `${days} ${days === 1 ? 'day' : 'days'}`
+  const next = nextStep(person, days)
+  const points = talkingPoints(person.note)
 
   // Opens LinkedIn or Mail only after you've said why, so the answer is never skipped.
   // Called straight from the tap, so the phone allows the new tab.
@@ -96,7 +98,7 @@ function DeqCard({ person, interactive = true, open = true }) {
   }
 
   async function logContact(channel) {
-    await db.cards.update(person.id, { lastContacted: Date.now(), lastChannel: channel })
+    await db.cards.update(person.id, spokeNow(person, channel))
     setUpdating(false)
     setAsking(null)
   }
@@ -252,32 +254,14 @@ function DeqCard({ person, interactive = true, open = true }) {
                 </div>
               </div>
             ) : (
-              <div className="xcard-foot">
-                <button className="xcard-days-big" onClick={() => setUpdating(true)} aria-label={`${daysLabel} since you spoke. Tap to update.`}>
-                  {days === 0 ? 'Today' : `${days}d`}
-                  <small>{days === 0 ? 'YOU SPOKE' : 'SINCE YOU SPOKE'}</small>
+              // the glance: when to reach out, and what to talk about. Everything else is one more tap.
+              <div className="xcard-foot calm">
+                <button className={`xcard-when ${next.late ? 'late' : next.soon ? 'soon' : ''}`} onClick={() => setUpdating(true)} aria-label={`${next.label} ${next.detail}. Tap to log that you spoke.`}>
+                  <i aria-hidden="true" />
+                  {next.label}
+                  {next.detail && <span> · {next.detail}</span>}
                 </button>
-                <div className="xcard-actions">
-                  {person.linkedin && (
-                    <a className="glass-pill" href={linkedinUrl(person.linkedin)} target="_blank" rel="noreferrer" onClick={event => {
-                        event.preventDefault()
-                        setAsking('LinkedIn')
-                      }}>
-                      LinkedIn
-                    </a>
-                  )}
-                  {person.email && (
-                    <a className="glass-pill" href={`mailto:${person.email}`} onClick={event => {
-                        event.preventDefault()
-                        setAsking('Mail')
-                      }}>Mail</a>
-                  )}
-                  {!person.linkedin && !person.email && (
-                    <button className="glass-pill" onClick={() => setEditing(true)}>
-                      <PlusIcon size={14} /> Contact
-                    </button>
-                  )}
-                </div>
+                {points.length > 0 && <p className="xcard-about">{points.slice(0, 3).join(' · ')}</p>}
               </div>
             )}
           </motion.div>
