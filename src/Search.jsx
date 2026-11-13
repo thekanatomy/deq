@@ -3,6 +3,7 @@ import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState } from 
 import { meshImage } from './brands'
 import { placeOf } from './filters'
 import DateWheel from './Wheel.jsx'
+import Forgot from './Forgot'
 import { CloseIcon, SearchIcon } from './icons'
 import { companyOf, roleOf } from './text'
 
@@ -50,6 +51,7 @@ function saveRecent(list) {
 // Full-screen search: one field, scopes under it, and before you type, quick ways
 // in (recent people, places, when). Results show why each person matched.
 export default function Search({ people, startScope = 'All', focusId = null, onOpenPerson, onClose }) {
+  const [forgetting, setForgetting] = useState(false)
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState(startScope)
   const [when, setWhen] = useState(null)
@@ -211,6 +213,16 @@ export default function Search({ people, startScope = 'All', focusId = null, onO
           <AnimatePresence mode="wait" initial={false}>
             {idle ? (
               <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2, ease: EASE }}>
+                {people.length > 1 && (
+                  <button className="forgot-entry" onClick={() => setForgetting(true)}>
+                    <i aria-hidden="true">✨</i>
+                    <span>
+                      <b>I forgot who someone is</b>
+                      <small>Answer a few taps and deq finds them</small>
+                    </span>
+                    <span className="chev" aria-hidden="true">›</span>
+                  </button>
+                )}
                 {newest.length > 0 && (
                   <section className="search-section">
                     <p className="search-heading">Recently met</p>
@@ -316,6 +328,9 @@ export default function Search({ people, startScope = 'All', focusId = null, onO
           </AnimatePresence>
         )}
       </div>
+      <AnimatePresence>
+        {forgetting && <Forgot key="forgot" people={people} onOpenPerson={onOpenPerson} onClose={() => setForgetting(false)} />}
+      </AnimatePresence>
     </motion.div>
   )
 }

@@ -5399,3 +5399,77 @@ html.sideways body {
   font-weight: 800;
 }
 .reach-again .reach-in { margin-bottom: 1.25rem; font-size: 1.0625rem; }
+
+/* ---------- "I forgot who someone is" ---------- */
+.forgot-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  margin: 0 0 1.25rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid rgba(94, 92, 230, 0.35);
+  border-radius: 1.125rem;
+  background: linear-gradient(120deg, rgba(94, 92, 230, 0.22), var(--surface) 70%);
+  color: var(--label);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 140ms var(--ease-out);
+}
+.forgot-entry:active { transform: scale(0.98); }
+.forgot-entry i { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: #5e5ce6; font-style: normal; font-size: 1.25rem; }
+.forgot-entry b { display: block; font-size: var(--size-body); font-weight: 600; }
+.forgot-entry small { display: block; margin-top: 0.125rem; color: var(--label-secondary); font-size: 0.8125rem; }
+.forgot-entry .chev { margin-left: auto; color: var(--label-tertiary, #8e8e93); font-size: 1.25rem; }
+
+.forgot {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--label);
+}
+.forgot-top { display: flex; justify-content: flex-end; padding: calc(env(safe-area-inset-top) + 0.75rem) 1.25rem 0; position: relative; min-height: 3.5rem; }
+.forgot-top .w2-close { top: calc(env(safe-area-inset-top) + 0.75rem); }
+.forgot-scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 1.25rem 1.5rem; }
+.forgot-title { margin: 0.25rem 0 0.25rem; font-size: 2rem; font-weight: 800; letter-spacing: -0.04em; }
+.forgot-sub { margin: 0 0 0.5rem; color: var(--label-secondary); font-size: 0.9375rem; }
+.forgot-q p { margin: 1.125rem 0 0.5rem; font-size: 0.9375rem; font-weight: 600; }
+.forgot-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.forgot-chips button {
+  padding: 0.5rem 0.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--label);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 150ms var(--ease-out), color 150ms var(--ease-out), transform 120ms var(--ease-out);
+}
+.forgot-chips button:active { transform: scale(0.95); }
+.forgot-chips button.on { background: var(--label); color: var(--bg); font-weight: 600; }
+
+.forgot-results {
+  flex: none;
+  padding: 0.875rem 0 calc(env(safe-area-inset-bottom) + 1rem);
+  border-top: 1px solid rgba(128, 128, 128, 0.18);
+  background: var(--bg);
+}
+.forgot-count { margin: 0 1.25rem 0.625rem; font-size: 0.9375rem; font-weight: 600; }
+.forgot-count span { color: var(--label-secondary); font-weight: 400; }
+.forgot-strip { display: flex; gap: 0.75rem; min-height: 1px; padding: 0 1.25rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.forgot-strip::-webkit-scrollbar { display: none; }
+.forgot-card {
+  flex: none;
+  width: 8.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  scroll-snap-align: start;
+  cursor: pointer;
+}
+.forgot-card.partial { opacity: 0.6; }
