@@ -177,13 +177,9 @@ export default function App() {
   // Skip on the film hides it for this visit; it comes back next time while the deck is empty
   const [skippedFilm, setSkippedFilm] = useState(false)
   const [myCardOpen, setMyCardOpen] = useState(false)
-  // "Tap the card for more" shows until you've opened the details three times
-  const [showZoomHint, setShowZoomHint] = useState(() => Number(recall('deq-zoom-used', true) ?? 0) < 3)
-  function learnedZoom() {
-    const used = Number(recall('deq-zoom-used', true) ?? 0) + 1
-    remember('deq-zoom-used', String(used), true)
-    if (used >= 3) setShowZoomHint(false)
-  }
+  // "Tap the card for more" always shows above an opened card: a quiet, permanent label
+  const showZoomHint = true
+  function learnedZoom() {}
   const [openId, setOpenId] = useState(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [addedId, setAddedId] = useState(null)
