@@ -16,9 +16,6 @@ let edgeTouchAt = 0
 const safariTab = isIOS && !isStandalone()
 
 if (typeof window !== 'undefined') {
-  // deq places everything itself: stop the browser jumping the scroll position on Back
-  if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
-
   if (safariTab) {
     window.addEventListener(
       'touchstart',
