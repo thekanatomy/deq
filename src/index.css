@@ -4769,3 +4769,41 @@ html.sideways body {
   font-weight: 700;
   cursor: pointer;
 }
+
+/* ---------- About: the maker's card ---------- */
+.maker-card {
+  display: flex;
+  flex-direction: column;
+  width: min(calc(100vw - 3rem), 20rem);
+  aspect-ratio: 1 / 1.3;
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  border-radius: 1.75rem;
+  background-size: 96px 96px, cover;
+  color: var(--card-ink);
+  box-shadow: 0 24px 50px -20px rgba(0, 40, 120, 0.55);
+}
+.maker-label {
+  font-size: var(--size-callout);
+  font-weight: 700;
+  color: var(--card-ink-soft);
+}
+.maker-bottom { margin-top: auto; }
+.maker-name {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+.maker-line {
+  margin: 0.5rem 0 0;
+  font-size: var(--size-body);
+  font-weight: 600;
+  line-height: 1.35;
+}
+.maker-place {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--card-ink-soft);
+}
