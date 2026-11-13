@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { meshImage } from './brands'
 import { db } from './db'
 import { placeOf } from './filters'
+import { searchPlaces } from './places'
 
 // A quiet, Apple Maps-like map: OpenFreeMap's "Positron" style. Free, no API key,
 // no account. Each person is a small round pin; tap one to see who it is.
@@ -65,6 +66,53 @@ export default function PeopleMap({ people, focusId, onOpenPerson }) {
   const [problem, setProblem] = useState(null)
   const [ready, setReady] = useState(false)
   const placed = people.filter(person => Number.isFinite(person.lat) && Number.isFinite(person.lng))
+
+  // Search right on the map: your own places first (instant), then real places nearby.
+  const [query, setQuery] = useState('')
+  const [found, setFound] = useState([])
+  const spot = useRef(null)
+  const text = query.trim().toLowerCase()
+  const mine = text
+    ? [...new Map(placed.filter(person => person.place?.toLowerCase().includes(text)).map(person => [placeOf(person), person])).values()]
+        .slice(0, 3)
+        .map(person => ({ name: person.place.split(',')[0], detail: 'Where you met someone', lat: person.lat, lng: person.lng, mine: true }))
+    : []
+  useEffect(() => {
+    if (text.length < 3) return setFound([])
+    const controller = new AbortController()
+    const timer = setTimeout(() => {
+      const centre = map.current?.getCenter()
+      searchPlaces(query, centre && { lat: centre.lat, lng: centre.lng }, controller.signal)
+        .then(setFound)
+        .catch(() => {})
+    }, 280)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [text]) // eslint-disable-line react-hooks/exhaustive-deps
+  const options = [...mine, ...found.filter(option => !mine.some(own => own.name === option.name))].slice(0, 6)
+
+  function goTo(option) {
+    setQuery(option.name)
+    setFound([])
+    setPicked(null)
+    document.activeElement?.blur()
+    spot.current?.remove()
+    if (!option.mine) {
+      const dot = document.createElement('span')
+      dot.className = 'map-spot'
+      spot.current = new maplibregl.Marker({ element: dot }).setLngLat([option.lng, option.lat]).addTo(map.current)
+    }
+    map.current?.flyTo({ center: [option.lng, option.lat], zoom: 15.5, duration: 1100, essential: true })
+  }
+
+  function clearSearch() {
+    setQuery('')
+    setFound([])
+    spot.current?.remove()
+    spot.current = null
+  }
   const unplaced = people.filter(person => person.place && !Number.isFinite(person.lat))
 
   useEffect(() => {
@@ -166,6 +214,41 @@ export default function PeopleMap({ people, focusId, onOpenPerson }) {
   return (
     <div className="people-map">
       <div ref={box} className="people-map-canvas" />
+      <div className="map-search">
+        <label className="map-search-field">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="6.5" />
+            <path d="m20 20-4.2-4.2" />
+          </svg>
+          <input
+            type="search"
+            enterKeyHint="search"
+            autoComplete="off"
+            placeholder="Search the map"
+            aria-label="Search a place on the map"
+            value={query}
+            onChange={event => setQuery(event.target.value)}
+            onKeyDown={event => event.key === 'Enter' && options[0] && goTo(options[0])}
+          />
+          {query && (
+            <button className="map-search-clear" aria-label="Clear" onClick={clearSearch}>
+              ✕
+            </button>
+          )}
+        </label>
+        {options.length > 0 && text && options[0].name.toLowerCase() !== text && (
+          <ul className="map-search-list" role="listbox">
+            {options.map(option => (
+              <li key={`${option.name}${option.lat}`}>
+                <button onClick={() => goTo(option)}>
+                  <b>{option.name}</b>
+                  {option.detail && <small>{option.detail}</small>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
       {problem ? (
         <p className="map-empty">{problem}</p>
       ) : (

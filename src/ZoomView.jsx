@@ -124,6 +124,7 @@ export default function ZoomView({ person, onClose }) {
     : mail && { id: 'mail', label: 'Mail', icon: <MailIcon />, href: mail }
   const quick = [
     { id: 'spoke', label: spoke ? 'Logged' : 'Spoke Today', icon: <CheckIcon />, run: spokeToday, done: spoke },
+    { id: 'calendar', label: 'Calendar', icon: <CalendarPlusIcon />, run: () => setChoosing(true) },
     message,
     person.place && { id: 'map', label: 'Map', icon: <PinIcon />, run: showOnMap },
   ].filter(Boolean)
@@ -137,7 +138,6 @@ export default function ZoomView({ person, onClose }) {
     phone && { id: 'call', label: 'Call', icon: <PhoneIcon />, href: `tel:${phone}` },
     phone && { id: 'message', label: 'Message', icon: <BubbleIcon />, href: `sms:${phone}` },
     phone && { id: 'whatsapp', label: 'WhatsApp', icon: <BubbleIcon />, href: `https://wa.me/${phone.replace(/^\+/, '')}` },
-    { id: 'calendar', label: 'Calendar', icon: <CalendarPlusIcon />, run: () => setChoosing(true) },
     { id: 'contact', label: 'Save Contact', icon: <PersonPlusIcon />, run: saveContact },
     { id: 'share', label: 'Share', icon: <ShareIcon />, run: share },
   ].filter(Boolean)

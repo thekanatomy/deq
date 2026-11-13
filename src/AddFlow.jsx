@@ -8,7 +8,7 @@ import { readPhoto } from './vision'
 import { cropFace } from './face'
 import { searchPlaces } from './places'
 import DateWheel from './Wheel.jsx'
-import { openReminder } from './calendar'
+import { CALENDARS, openReminder } from './calendar'
 import ScanReading from './ScanReading'
 import NoteBuilder from './NoteBuilder'
 import { useBack } from './back'
@@ -34,8 +34,9 @@ const DAY = 24 * 60 * 60 * 1000
 
 function lastCalendar() {
   try {
-    // only Google Calendar is offered here for now
-    return localStorage.getItem('deq-remind-with') === 'google' ? 'google' : null
+    // the last calendar picked, if this phone offers it
+    const saved = localStorage.getItem('deq-remind-with')
+    return CALENDARS.some(calendar => calendar.id === saved) ? saved : null
   } catch {
     return null
   }
@@ -593,17 +594,17 @@ export default function AddFlow({ initial: given, recentPlaces, placeCoords, onS
                 )}
                 <div className="stack-remind">
                   <span>Remind me in</span>
-                  <div className="remind-options">
-                    {[{ id: null, short: 'Just deq' }, { id: 'google', short: 'Google Calendar' }].map(option => (
+                  <div className="stack-chips">
+                    {[{ id: null, label: 'Just deq' }, ...CALENDARS].map(option => (
                       <button
                         key={option.id ?? 'none'}
-                        className={fields.remindWith === option.id ? 'remind-option active' : 'remind-option'}
+                        className={fields.remindWith === option.id ? 'stack-chip on' : 'stack-chip'}
                         onClick={() => {
                           set('remindWith', option.id)
                           rememberCalendar(option.id)
                         }}
                       >
-                        {option.short}
+                        {option.label}
                       </button>
                     ))}
                   </div>
