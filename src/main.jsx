@@ -58,6 +58,24 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 console.info(`deq build ${__BUILD__}`)
 
 // Shows the error on screen instead of a blank page.
+// Safari: "Importing a module script failed." Chrome: "Failed to fetch dynamically imported module".
+const isStaleFile = error =>
+  /Importing a module script failed|Failed to fetch dynamically imported module|error loading dynamically imported module|Unable to preload CSS/i.test(
+    String(error?.message || error),
+  )
+
+function reloadOnce() {
+  let last = 0
+  try {
+    last = Number(sessionStorage.getItem('deq-reloaded-for-update')) || 0
+    if (Date.now() - last < 10_000) return // just tried: show the button instead of looping
+    sessionStorage.setItem('deq-reloaded-for-update', String(Date.now()))
+  } catch {
+    // private mode: reload anyway
+  }
+  window.location.reload()
+}
+
 class ErrorScreen extends Component {
   state = { error: null }
 
@@ -65,8 +83,29 @@ class ErrorScreen extends Component {
     return { error }
   }
 
+  componentDidCatch(error) {
+    // A new version went live while this one was open: the old file it asked for is gone.
+    // Reload once onto the new version instead of showing an error.
+    if (isStaleFile(error)) reloadOnce()
+  }
+
   render() {
     if (!this.state.error) return this.props.children
+    if (isStaleFile(this.state.error)) {
+      return (
+        <div style={{ display: 'grid', placeItems: 'center', minHeight: '100vh', padding: 24, textAlign: 'center', font: '600 17px -apple-system, system-ui, sans-serif' }}>
+          <div>
+            <p style={{ margin: '0 0 16px' }}>deq just updated.</p>
+            <button
+              onClick={() => window.location.reload()}
+              style={{ padding: '12px 22px', border: 0, borderRadius: 999, background: '#0a84ff', color: '#fff', font: 'inherit' }}
+            >
+              Open the new version
+            </button>
+          </div>
+        </div>
+      )
+    }
     return (
       <pre style={{ padding: 20, whiteSpace: 'pre-wrap', color: '#d70015', fontSize: 13 }}>
         {String(this.state.error?.stack || this.state.error)}
