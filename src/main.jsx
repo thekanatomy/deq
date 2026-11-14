@@ -48,6 +48,12 @@ if (import.meta.env.PROD) {
   })
 }
 
+// The offline copy (public build only): a phone that has opened deq before can open
+// it again when the network fails, or on a Wi-Fi that blocks deq.one.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}))
+}
+
 // which version is running, for checking a phone: open the browser's console
 console.info(`deq build ${__BUILD__}`)
 

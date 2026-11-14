@@ -1,5 +1,7 @@
 import basicSsl from '@vitejs/plugin-basic-ssl'
 import react from '@vitejs/plugin-react'
+import { readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { defineConfig, loadEnv } from 'vite'
 
 // In development, answer /api/scan, /api/ics and /api/pass right here with the same code Vercel runs in production.
@@ -70,8 +72,28 @@ function devApi() {
   }
 }
 
+// The offline copy: writes sw.js into the build with this version's file list, so a phone
+// that has opened deq before can open it again when the network fails (src/sw-template.js).
+function offlineCopy() {
+  return {
+    name: 'deq-offline-copy',
+    apply: 'build',
+    generateBundle(_, bundle) {
+      const assets = Object.keys(bundle)
+        .filter(file => file.startsWith('assets/'))
+        .map(file => `/${file}`)
+        .sort()
+      const version = createHash('sha1').update(assets.join('\n')).digest('hex').slice(0, 10)
+      const source = readFileSync('src/sw-template.js', 'utf8')
+        .replace('__VERSION__', version)
+        .replace('__ASSETS__', JSON.stringify(assets))
+      this.emitFile({ type: 'asset', fileName: 'sw.js', source })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), basicSsl(), devApi()],
+  plugins: [react(), basicSsl(), devApi(), offlineCopy()],
   server: { host: true },
   // which version is running, shown in About: the commit Vercel built from
   define: { __BUILD__: JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA || 'dev').slice(0, 7)) },

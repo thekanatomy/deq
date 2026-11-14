@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 're
 import AddedMoment from './AddedMoment'
 import AddFlow from './AddFlow'
 import { readDraft } from './draft'
+import OfflineNote from './OfflineNote'
 import CardForm from './CardForm.jsx'
 import DeqCard from './DeqCard'
 import DetailsSheet from './DetailsSheet'
@@ -760,6 +761,7 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+      <OfflineNote />
       </LayoutGroup>
     </MotionConfig>
   )
