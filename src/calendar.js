@@ -43,9 +43,17 @@ export function googleCalendarUrl(person) {
   return `https://calendar.google.com/calendar/render?${params}`
 }
 
+// Every event needs its own id: a new person has no id yet, and two people with the
+// same reach-out day used to share "undefined-<time>", so iPhone treated the second
+// as already added and never created it.
+function eventId(person, start) {
+  const random = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  return `${person.id ?? random}-${start.getTime()}`
+}
+
 function appleCalendar(person) {
   const { title, start, end, details } = event(person)
-  const params = new URLSearchParams({ title, start: stamp(start), end: stamp(end), details, uid: `${person.id}-${start.getTime()}` })
+  const params = new URLSearchParams({ title, start: stamp(start), end: stamp(end), details, uid: eventId(person, start) })
   window.location.href = `/api/ics?${params}`
 }
 

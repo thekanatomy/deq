@@ -46,7 +46,7 @@ export const placeOf = person => (person.place ?? '').split(',')[0].trim()
 export const GROUPS = [
   { id: 'company', name: 'Companies' },
   { id: 'role', name: 'Roles' },
-  { id: 'place', name: 'Where You Met' },
+  { id: 'place', name: 'Location' },
 ]
 
 // The ways to look at your deq: everyone, then by company, role and place.

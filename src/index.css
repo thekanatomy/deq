@@ -6076,3 +6076,14 @@ html.sideways body {
 .dk-fan .dk-name { font-size: 32px; }
 
 .dk-soon { display: inline-block; margin: 0 0 32px; padding: 8px 14px; border-radius: 999px; background: #1c1c1e; color: #a1a1a6; font-size: 14px; }
+
+/* right after adding: connect on LinkedIn while you still remember them */
+.added-linkedin {
+  display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 1.25rem;
+  padding: 0.85rem 1.4rem; border-radius: 999px; background: #0a66c2; color: #fff;
+  font-size: 1.0625rem; font-weight: 600; text-decoration: none;
+}
+.added-linkedin svg { width: 1.15rem; height: 1.15rem; }
+.added-linkedin:active { transform: scale(0.97); }
+.filter-chip { display: inline-flex; align-items: center; gap: 0.4rem; }
+.filter-chip-x { width: 0.95rem; height: 0.95rem; opacity: 0.8; }

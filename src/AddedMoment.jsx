@@ -1,17 +1,33 @@
 import { motion } from 'motion/react'
 import { useEffect } from 'react'
+import { linkedinUrl } from './contact'
 import DeqCard from './DeqCard'
 
 // Apple Wallet's confirmation: the new card large, a checkmark drawn beside the title,
 // then it hands off to the deck on its own.
+// With the LinkedIn button it stays longer, so there's time to tap it.
 const STAY_MS = 1600
+const STAY_WITH_ACTION_MS = 5000
+
+// Right after adding someone: connect while you still remember them. Their LinkedIn
+// if the scan had it, otherwise a LinkedIn people search for their name (and company).
+// linkedin.com links open the LinkedIn app when it's installed.
+function linkedinFor(person) {
+  if (person.linkedin) return { href: linkedinUrl(person.linkedin), label: 'Open LinkedIn' }
+  const keywords = [person.name, person.company].filter(Boolean).join(' ')
+  return {
+    href: `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(keywords)}`,
+    label: `Find ${person.name.split(' ')[0]} on LinkedIn`,
+  }
+}
 
 export default function AddedMoment({ person, onDone }) {
+  const link = person.name ? linkedinFor(person) : null
   useEffect(() => {
     navigator.vibrate?.([15, 60, 25])
-    const timer = setTimeout(onDone, STAY_MS)
+    const timer = setTimeout(onDone, link ? STAY_WITH_ACTION_MS : STAY_MS)
     return () => clearTimeout(timer)
-  }, [onDone])
+  }, [onDone, Boolean(link)])
 
   return (
     <motion.div
@@ -57,6 +73,27 @@ export default function AddedMoment({ person, onDone }) {
           {person.followUpDays ? ` We’ll remind you ${remindIn(person.followUpDays)}.` : ''}
         </span>
       </motion.h2>
+
+      {link && (
+        <motion.a
+          className="added-linkedin"
+          href={link.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          initial={{ y: 12, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: 'spring', bounce: 0, duration: 0.4, delay: 0.3 }}
+          onClick={event => {
+            event.stopPropagation()
+            setTimeout(onDone, 300)
+          }}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9.75h4v11H3v-11Zm6.5 0h3.8v1.5h.05c.53-1 1.83-2.05 3.77-2.05 4.03 0 4.78 2.65 4.78 6.1v5.45h-4v-4.83c0-1.15-.02-2.63-1.6-2.63-1.6 0-1.85 1.25-1.85 2.55v4.91h-4v-11Z" />
+          </svg>
+          {link.label}
+        </motion.a>
+      )}
     </motion.div>
   )
 }

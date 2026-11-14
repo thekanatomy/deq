@@ -7,7 +7,7 @@ import { cascade } from './MenuSheet.jsx'
 const SPRING = { type: 'spring', bounce: 0, duration: 0.4 }
 
 // Full screen, like the menu. The first page: Everyone, then Companies, Roles and
-// Where You Met, each opening its own list that slides in from the right.
+// Location, each opening its own list that slides in from the right.
 export default function CategoriesSheet({ filters, current, onPick, onClose }) {
   const [page, setPage] = useState(null) // null | 'company' | 'role' | 'place'
   const [cameBack, setCameBack] = useState(false)

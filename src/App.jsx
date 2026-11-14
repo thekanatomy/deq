@@ -488,8 +488,11 @@ export default function App() {
             {list.length > 0 && filter.id === 'all' && <Summary people={list} onOpen={() => setInsightsOpen(true)} onWaiting={() => setWaitingOpen(true)} onInstall={canInstall ? startInstall : null} />}
             {filter.id === 'all' && <Nudge people={list} onOpen={openCard} />}
             {filter.id !== 'all' && (
-              <button className="filter-chip" onClick={() => setFilterId('all')}>
-                {plural(list.length, 'person')} · Show everyone
+              <button className="filter-chip" onClick={() => setFilterId('all')} aria-label={`Clear ${filter.name}, show everyone`}>
+                {filter.name}
+                <svg className="filter-chip-x" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+                </svg>
               </button>
             )}
           </motion.div>

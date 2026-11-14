@@ -19,7 +19,7 @@ drop policy if exists "Own cards only" on public.cards;
 create policy "Own cards only" on public.cards
   for all to authenticated
   using (user_id = (select auth.uid()))
-  with check (user_id = (select auth.uid()));
+  with check (user_id = (select auAth.uid()));
 
 -- The server stamps every write, so phones with wrong clocks still sync correctly.
 create or replace function public.stamp_synced_at() returns trigger
