@@ -5872,3 +5872,13 @@ html.sideways body {
   display: block; width: 18px; height: 18px; border: 3px solid #fff; border-radius: 50%;
   background: var(--tint-fill); box-shadow: 0 0 0 6px rgba(0, 113, 227, 0.2), 0 4px 10px rgba(0, 0, 0, 0.25);
 }
+
+/* your photo on My Card: for the card and the wallet pass */
+.mycard-photo button {
+  display: flex; align-items: center; gap: 0.75rem; justify-self: start;
+  padding: 0.5rem 0; border: 0; background: none; color: var(--tint);
+  font: inherit; font-size: var(--size-body); cursor: pointer;
+}
+.mycard-photo img, .mycard-photo i {
+  width: 2.25rem; height: 2.25rem; border-radius: 50%; object-fit: cover; background: var(--fill, rgba(120,120,128,0.2));
+}

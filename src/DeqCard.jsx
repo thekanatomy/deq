@@ -44,8 +44,9 @@ function initials(name = '') {
 
 // Turns the stored photo into something an <img> can show, and frees it afterwards.
 function usePhotoUrl(photo) {
-  const url = useMemo(() => (photo ? URL.createObjectURL(photo) : null), [photo])
-  useEffect(() => () => url && URL.revokeObjectURL(url), [url])
+  // your own card keeps its photo as text (a data URL), which needs no freeing
+  const url = useMemo(() => (typeof photo === 'string' ? photo : photo ? URL.createObjectURL(photo) : null), [photo])
+  useEffect(() => () => url?.startsWith('blob:') && URL.revokeObjectURL(url), [url])
   return url
 }
 

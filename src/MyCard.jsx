@@ -1,7 +1,8 @@
 import { motion } from 'motion/react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { isAndroid } from './browser'
 import DeqCard from './DeqCard'
+import { cropFace, cropSquare } from './face'
 import { CloseIcon } from './icons'
 import { loadMe, saveMe } from './me'
 import { cardCode, cardLink } from './share'
@@ -14,8 +15,8 @@ const FIELDS = [
   { key: 'email', label: 'Email', placeholder: 'you@asu.edu', type: 'email', autoCapitalize: 'none' },
 ]
 
-// Your own card: what people get when they scan you. It goes into Apple Wallet
-// (made by WalletWallet), and its QR code opens Deq with you ready to add.
+// Your own card: what people get when they scan you. It goes into Apple Wallet or
+// Google Wallet (made by WalletWallet), and its QR code opens Deq with you ready to add.
 export default function MyCard({ owner, onClose }) {
   const [me, setMe] = useState(() => loadMe(owner))
   const [copied, setCopied] = useState(false)
@@ -28,10 +29,38 @@ export default function MyCard({ owner, onClose }) {
     saveMe(next)
   }
 
+  // Your photo for the card and the wallet pass: your face if it finds one, else the
+  // middle of the picture, small enough to keep on this phone.
+  const pickRef = useRef(null)
+  async function pickPhoto(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    const square = (await cropFace(file, 360)) ?? (await cropSquare(file, 360))
+    if (!square) return
+    const reader = new FileReader()
+    reader.onload = () => update('photo', reader.result)
+    reader.readAsDataURL(square)
+  }
+
   function addToWallet() {
     saveMe(me)
-    // a plain navigation, so Safari opens the pass in "Add to Apple Wallet"
-    window.location.href = `/api/pass?card=${cardCode(me)}`
+    // A form, not a fetch: the photo is too big for a link, and a navigation lets the
+    // phone open the pass in its own wallet (Apple's sheet, or Google Wallet's page).
+    const form = document.createElement('form')
+    form.method = 'POST'
+    form.action = '/api/pass'
+    const fields = { card: cardCode(me), ...(me.photo && { photo: me.photo }), ...(isAndroid && { to: 'google' }) }
+    for (const [name, value] of Object.entries(fields)) {
+      const input = document.createElement('input')
+      input.type = 'hidden'
+      input.name = name
+      input.value = value
+      form.appendChild(input)
+    }
+    document.body.appendChild(form)
+    form.submit()
+    form.remove()
   }
 
   async function share() {
@@ -79,23 +108,27 @@ export default function MyCard({ owner, onClose }) {
         </motion.div>
 
         <div className="mycard-actions">
-          {!isAndroid && (
-            <button className="wallet-button" disabled={!ready} onClick={addToWallet}>
-              <WalletGlyph />
-              Add to Apple Wallet
-            </button>
-          )}
+          <button className="wallet-button" disabled={!ready} onClick={addToWallet}>
+            {isAndroid ? <GoogleWalletGlyph /> : <WalletGlyph />}
+            {isAndroid ? 'Add to Google Wallet' : 'Add to Apple Wallet'}
+          </button>
           <button className="glass-pill mycard-share" disabled={!ready} onClick={share}>
             {copied ? 'Link copied' : isAndroid ? 'Share my card' : 'Share link'}
           </button>
           <p className="mycard-note">
-            {isAndroid
-              ? 'Anyone who opens your link can add you to their deq in one tap.'
-              : 'Show it from Wallet at events. Scanning the code adds you to their deq, no app needed.'}
+            Show it from your wallet at events. Scanning the code adds you to their deq, no app needed.
           </p>
         </div>
 
         <div className="mycard-fields">
+          <div className="mycard-field mycard-photo">
+            <span>Photo</span>
+            <button onClick={() => pickRef.current?.click()}>
+              {me.photo ? <img src={me.photo} alt="" /> : <i aria-hidden="true" />}
+              {me.photo ? 'Change' : 'Add your photo'}
+            </button>
+            <input ref={pickRef} type="file" accept="image/*" hidden onChange={pickPhoto} />
+          </div>
           {FIELDS.map(field => (
             <label key={field.key} className="mycard-field">
               <span>{field.label}</span>
@@ -122,6 +155,18 @@ function WalletGlyph() {
       <rect x="3" y="7.5" width="18" height="3" fill="#30a2ff" />
       <rect x="3" y="10.5" width="18" height="3" fill="#ff9f0a" />
       <path d="M3 13.5h6.5a2.5 2.5 0 0 0 5 0H21V16a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3Z" fill="#d1d1d6" />
+    </svg>
+  )
+}
+
+// Google Wallet's mark, simplified: four stacked colour bands
+function GoogleWalletGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="7" rx="2.5" fill="#EA4335" />
+      <rect x="3" y="7.5" width="18" height="7" rx="2.5" fill="#FBBC04" />
+      <rect x="3" y="11" width="18" height="7" rx="2.5" fill="#34A853" />
+      <path d="M3 15.5h7a2.5 2.5 0 0 0 4 0h7V18a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3Z" fill="#4285F4" />
     </svg>
   )
 }
