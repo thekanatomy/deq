@@ -383,11 +383,11 @@ button {
 }
 
 .xcard-days {
-  margin: 1.6cqw 0 0;
+  margin: 1.2cqw 0 0;
   font-variant-numeric: tabular-nums;
-  font-size: 6.4cqw;
+  font-size: 5.3cqw; /* a step under the name (8.6), like Apple's title → subheadline */
   font-weight: 500;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
 }
 
 .xcard-channel {
