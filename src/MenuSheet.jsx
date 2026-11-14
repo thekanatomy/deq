@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import Privacy from './Privacy'
 import { useState } from 'react'
 import { BackIcon, CloseIcon } from './icons'
+import { isAndroid, isIOS } from './browser'
 import SignIn from './SignIn'
 import { accountsEnabled, setBackup, signOut, syncNow, useAccount } from './sync'
 
@@ -45,7 +46,7 @@ export default function MenuSheet({ count, onMyCard, onClose }) {
     account.user
       ? { id: 'account', label: 'Account', detail: account.user.email }
       : { id: 'account', label: 'Sign In', detail: 'Back up your deq', alert: accountsEnabled },
-    { id: 'card', label: 'Your Card', detail: 'Apple Wallet' },
+    { id: 'card', label: 'Your Card', detail: isAndroid ? 'Google Wallet' : isIOS ? 'Apple Wallet' : 'Wallet' },
     { id: 'about', label: 'About Deq' },
   ]
 
