@@ -1,8 +1,7 @@
 import { motion } from 'motion/react'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { isAndroid } from './browser'
 import DeqCard from './DeqCard'
-import { cropFace, cropSquare } from './face'
 import { CloseIcon } from './icons'
 import { loadMe, saveMe } from './me'
 import { cardCode, cardLink } from './share'
@@ -29,38 +28,11 @@ export default function MyCard({ owner, onClose }) {
     saveMe(next)
   }
 
-  // Your photo for the card and the wallet pass: your face if it finds one, else the
-  // middle of the picture, small enough to keep on this phone.
-  const pickRef = useRef(null)
-  async function pickPhoto(event) {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) return
-    const square = (await cropFace(file, 360)) ?? (await cropSquare(file, 360))
-    if (!square) return
-    const reader = new FileReader()
-    reader.onload = () => update('photo', reader.result)
-    reader.readAsDataURL(square)
-  }
-
   function addToWallet() {
     saveMe(me)
-    // A form, not a fetch: the photo is too big for a link, and a navigation lets the
-    // phone open the pass in its own wallet (Apple's sheet, or Google Wallet's page).
-    const form = document.createElement('form')
-    form.method = 'POST'
-    form.action = '/api/pass'
-    const fields = { card: cardCode(me), ...(me.photo && { photo: me.photo }), ...(isAndroid && { to: 'google' }) }
-    for (const [name, value] of Object.entries(fields)) {
-      const input = document.createElement('input')
-      input.type = 'hidden'
-      input.name = name
-      input.value = value
-      form.appendChild(input)
-    }
-    document.body.appendChild(form)
-    form.submit()
-    form.remove()
+    // a plain navigation, so the phone opens the pass in its own wallet:
+    // Apple's "Add to Apple Wallet" sheet, or Google Wallet's save page
+    window.location.href = `/api/pass?card=${cardCode(me)}${isAndroid ? '&to=google' : ''}`
   }
 
   async function share() {
@@ -121,14 +93,6 @@ export default function MyCard({ owner, onClose }) {
         </div>
 
         <div className="mycard-fields">
-          <div className="mycard-field mycard-photo">
-            <span>Photo</span>
-            <button onClick={() => pickRef.current?.click()}>
-              {me.photo ? <img src={me.photo} alt="" /> : <i aria-hidden="true" />}
-              {me.photo ? 'Change' : 'Add your photo'}
-            </button>
-            <input ref={pickRef} type="file" accept="image/*" hidden onChange={pickPhoto} />
-          </div>
           {FIELDS.map(field => (
             <label key={field.key} className="mycard-field">
               <span>{field.label}</span>
