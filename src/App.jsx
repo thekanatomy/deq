@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from 'motion/react'
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import AddedMoment from './AddedMoment'
+import AddedMoment, { linkedinFor } from './AddedMoment'
 import AddFlow from './AddFlow'
 import { readDraft } from './draft'
 import OfflineNote from './OfflineNote'
@@ -187,6 +187,8 @@ export default function App() {
   const [openId, setOpenId] = useState(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [addedId, setAddedId] = useState(null)
+  // the card you just added: until you close it, it carries a LinkedIn button and a hint
+  const [freshId, setFreshId] = useState(null)
   const [zoomed, setZoomed] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [owner, setOwner] = useState(readOwner)
@@ -275,6 +277,7 @@ export default function App() {
   useBack(filterId !== 'all', () => setFilterId('all'))
 
   function closeCard() {
+    setFreshId(null)
     setZoomed(false)
     setDetailsOpen(false)
     setOpenId(null)
@@ -327,7 +330,10 @@ export default function App() {
   function finishAdded() {
     const id = addedId
     setAddedId(null)
-    if (id) openCard(id)
+    if (id) {
+      setFreshId(id)
+      openCard(id)
+    }
     if (pendingSave.current) {
       pendingSave.current = false
       setTimeout(() => setAskToSave('save'), 700)
@@ -477,6 +483,7 @@ export default function App() {
             </AnimatePresence>
           </div>
           {/* Wallet: an opened card goes straight to the top, so the summary folds away */}
+          <div className="top-title-wrap">
           <motion.div
             ref={titleRef}
             className="top-title"
@@ -496,6 +503,24 @@ export default function App() {
               </button>
             )}
           </motion.div>
+          {/* just added: find them on LinkedIn while you remember, and how to get back to the deck */}
+          <AnimatePresence>
+            {isOpen && open && open.id === freshId && (
+              <motion.div
+                className="fresh"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, transition: { duration: 0.15 } }}
+                transition={{ type: 'spring', bounce: 0, duration: 0.4, delay: 0.25 }}
+              >
+                <a className="fresh-linkedin" href={linkedinFor(open).href} target="_blank" rel="noopener noreferrer">
+                  {linkedinFor(open).label}
+                </a>
+                <p className="fresh-hint">Pull down to see your deq</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          </div>
         </header>
 
         <motion.section

@@ -12,7 +12,7 @@ const STAY_WITH_ACTION_MS = 5000
 // Right after adding someone: connect while you still remember them. Their LinkedIn
 // if the scan had it, otherwise a LinkedIn people search for their name (and company).
 // linkedin.com links open the LinkedIn app when it's installed.
-function linkedinFor(person) {
+export function linkedinFor(person) {
   if (person.linkedin) return { href: linkedinUrl(person.linkedin), label: 'Open LinkedIn' }
   const keywords = [person.name, person.company].filter(Boolean).join(' ')
   return {
@@ -23,11 +23,24 @@ function linkedinFor(person) {
 
 export default function AddedMoment({ person, onDone }) {
   const link = person.name ? linkedinFor(person) : null
+  const hasLink = Boolean(link)
   useEffect(() => {
     navigator.vibrate?.([15, 60, 25])
-    const timer = setTimeout(onDone, link ? STAY_WITH_ACTION_MS : STAY_MS)
-    return () => clearTimeout(timer)
-  }, [onDone, Boolean(link)])
+    // the timer only runs while deq is on screen: picking Apple Calendar opens another
+    // app, and coming back should still find this screen and its LinkedIn button
+    let timer = null
+    const start = () => {
+      clearTimeout(timer)
+      timer = setTimeout(onDone, hasLink ? STAY_WITH_ACTION_MS : STAY_MS)
+    }
+    const onVisibility = () => (document.visibilityState === 'visible' ? start() : clearTimeout(timer))
+    if (document.visibilityState === 'visible') start()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [onDone, hasLink])
 
   return (
     <motion.div

@@ -104,9 +104,11 @@ export default function ZoomView({ person, onClose }) {
     : null
 
   // the four that matter most sit right under the name: remind, log, reach out, where
+  // LinkedIn always: their profile, or a people search for their name if we don't have it
+  const linkedinSearch = `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent([person.name, person.company].filter(Boolean).join(' '))}`
   const message = person.linkedin
     ? { id: 'linkedin', label: 'LinkedIn', icon: <LinkedInIcon />, href: linkedinUrl(person.linkedin) }
-    : mail && { id: 'mail', label: 'Mail', icon: <MailIcon />, href: mail }
+    : { id: 'linkedin', label: 'Find on LinkedIn', icon: <LinkedInIcon />, href: linkedinSearch }
   const quick = [
     { id: 'spoke', label: spoke ? 'Logged' : 'Spoke Today', icon: <CheckIcon />, run: spokeToday, done: spoke },
     { id: 'calendar', label: 'Calendar', icon: <CalendarPlusIcon />, run: () => setChoosing(true) },
@@ -118,7 +120,7 @@ export default function ZoomView({ person, onClose }) {
   // contacts filled in from "How did you reach them?" become one-tap buttons here
   const phone = person.phone?.replace(/[^\d+]/g, '')
   const more = [
-    person.linkedin && mail && { id: 'mail', label: 'Mail', icon: <MailIcon />, href: mail },
+    mail && { id: 'mail', label: 'Mail', icon: <MailIcon />, href: mail },
     person.instagram && { id: 'instagram', label: 'Instagram', icon: <InstagramIcon />, href: `https://instagram.com/${person.instagram.replace(/^@/, '')}` },
     phone && { id: 'call', label: 'Call', icon: <PhoneIcon />, href: `tel:${phone}` },
     phone && { id: 'message', label: 'Message', icon: <BubbleIcon />, href: `sms:${phone}` },

@@ -6087,3 +6087,17 @@ html.sideways body {
 .added-linkedin:active { transform: scale(0.97); }
 .filter-chip { display: inline-flex; align-items: center; gap: 0.4rem; }
 .filter-chip-x { width: 0.95rem; height: 0.95rem; opacity: 0.8; }
+
+/* the card you just added: LinkedIn button + how to get back to the deck */
+.top-title-wrap { position: relative; }
+.fresh {
+  position: absolute; left: 0; right: 0; bottom: 0.5rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem; pointer-events: none;
+}
+.fresh-linkedin {
+  pointer-events: auto; display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.6rem 1.15rem; border-radius: 999px; background: #0a66c2; color: #fff;
+  font-size: var(--size-callout); font-weight: 600; text-decoration: none;
+}
+.fresh-linkedin:active { transform: scale(0.97); }
+.fresh-hint { margin: 0; color: var(--secondary, #8e8e93); font-size: var(--size-footnote, 0.8125rem); }
