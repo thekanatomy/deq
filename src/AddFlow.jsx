@@ -5,7 +5,7 @@ import { CloseIcon } from './icons'
 import { detectPlace } from './location'
 import { parseScan } from './scan'
 import { readPhoto } from './vision'
-import { cropFace } from './face'
+import { cropFace, cropSquare } from './face'
 import { searchPlaces } from './places'
 import DateWheel from './Wheel.jsx'
 import { CALENDARS, openReminder } from './calendar'
@@ -116,15 +116,17 @@ export default function AddFlow({ initial: given, recentPlaces, placeCoords, onS
   }, [])
 
   // Find their face in the scan at the same time as the AI reads it: a face becomes
-  // the avatar, cut out like a profile picture.
+  // the avatar, cut out like a profile picture. No face: the scan itself, cut square,
+  // is the avatar by default (you can change it on the card later).
   const faceRef = useRef(null)
   useEffect(() => {
     if (!initial.scanImage) return
     let cancelled = false
-    cropFace(initial.scanImage).then(face => {
-      if (cancelled || !face) return
-      faceRef.current = face
-      setFields(previous => ({ ...previous, photo: face }))
+    cropFace(initial.scanImage).then(async face => {
+      const avatar = face ?? (await cropSquare(initial.photo ?? initial.scanImage))
+      if (cancelled || !avatar) return
+      faceRef.current = avatar
+      setFields(previous => ({ ...previous, photo: avatar }))
     })
     return () => {
       cancelled = true
@@ -150,9 +152,8 @@ export default function AddFlow({ initial: given, recentPlaces, placeCoords, onS
       const previous = fieldsRef.current
       const filled = { ...previous }
       for (const [key, value] of Object.entries(details)) if (!String(previous[key] ?? '').trim()) filled[key] = value
-      // a found face is the avatar; otherwise a card or a screen isn't their face
+      // the avatar: their face if one was found, else the scan cut square
       if (faceRef.current) filled.photo = faceRef.current
-      else if (kind && kind !== 'person') delete filled.photo
       setFields(filled)
       setReadFrom(SOURCES[kind] ?? SOURCES.other)
       setReading('done') // the found words fly into their card

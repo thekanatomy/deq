@@ -53,3 +53,22 @@ export async function cropFace(blob, size = 512) {
     return null // no detector (offline, old phone): the card just keeps its initials
   }
 }
+
+// No face in it (a business card, a badge, a screen): the middle of the photo itself,
+// cut square, so the card still shows what you scanned instead of bare initials.
+export async function cropSquare(blob, size = 512) {
+  if (!blob) return null
+  try {
+    const bitmap = await createImageBitmap(blob)
+    const side = Math.min(bitmap.width, bitmap.height)
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = Math.min(size, side)
+    canvas
+      .getContext('2d')
+      .drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, canvas.width, canvas.height)
+    bitmap.close()
+    return await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.86))
+  } catch {
+    return null
+  }
+}

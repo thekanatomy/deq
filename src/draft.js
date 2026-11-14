@@ -6,7 +6,9 @@ const KEEP = 24 * 60 * 60 * 1000 // a day old and it's stale
 
 export function saveDraft(fields, open) {
   try {
-    const { scanImage: _scanImage, ...kept } = fields
+    // a photo is a Blob, which this storage can't hold: the words are what matters
+    const { scanImage: _scanImage, photo, ...rest } = fields
+    const kept = typeof photo === 'string' ? { ...rest, photo } : rest
     localStorage.setItem(KEY, JSON.stringify({ at: Date.now(), open, fields: kept }))
   } catch {
     // full or private mode: the photo is the big part, keep the words at least
