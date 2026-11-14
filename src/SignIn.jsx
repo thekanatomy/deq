@@ -1,7 +1,10 @@
 import { useState } from 'react'
+import { isAndroid } from './browser'
 import { sendMagicLink, signInWithGoogle, verifyCode } from './sync'
 
-// Google in one tap, or an email link (no password). Used by the "Save your deq"
+const SHOW_GOOGLE = false
+
+// An email code (no password); Google in one tap later. Used by the "Save your deq"
 // sheet and by Account in the menu.
 export default function SignIn() {
   const [email, setEmail] = useState('')
@@ -70,6 +73,7 @@ export default function SignIn() {
           onChange={event => checkCode(event.target.value)}
           aria-label="6-digit code"
         />
+        <MailApps email={email.trim()} />
         {message && state === 'sent' && <p className="signin-error" role="alert">{message}</p>}
         {state === 'checking' && <p className="signin-sent-text">Checking…</p>}
         <button
@@ -87,12 +91,16 @@ export default function SignIn() {
 
   return (
     <div className="signin">
-      <button className="google-button" onClick={google}>
-        <GoogleLogo />
-        Continue with Google
-      </button>
-
-      <p className="signin-or"><span>or</span></p>
+      {/* Google sign-in comes later: one email box keeps it simple */}
+      {SHOW_GOOGLE && (
+        <>
+          <button className="google-button" onClick={google}>
+            <GoogleLogo />
+            Continue with Google
+          </button>
+          <p className="signin-or"><span>or</span></p>
+        </>
+      )}
 
       <form className="signin-email" onSubmit={sendLink}>
         <input
@@ -115,6 +123,37 @@ export default function SignIn() {
       </form>
 
       {state === 'failed' && <p className="signin-error" role="alert">{message}</p>}
+    </div>
+  )
+}
+
+// One tap to the inbox. A web page can't bring up the phone's own list of mail apps,
+// so: on Android the system's "open email app" (it asks which, when there are several);
+// on iPhone, Mail plus the app that fits the address (Gmail for Gmail and ASU, Outlook
+// for Outlook). iPhone also offers the code above the keyboard once the email arrives.
+function MailApps({ email }) {
+  if (isAndroid) {
+    return (
+      <div className="mail-apps">
+        <a className="mail-app" href="intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.APP_EMAIL;end">
+          Open email app
+        </a>
+      </div>
+    )
+  }
+  const domain = email.split('@')[1]?.toLowerCase() ?? ''
+  const apps = [
+    { id: 'mail', label: 'Open Mail', href: 'message://' },
+    /gmail\.com$|googlemail\.com$|asu\.edu$/.test(domain) && { id: 'gmail', label: 'Gmail', href: 'googlegmail://' },
+    /outlook\.|hotmail\.|live\.|msn\./.test(domain) && { id: 'outlook', label: 'Outlook', href: 'ms-outlook://' },
+  ].filter(Boolean)
+  return (
+    <div className="mail-apps">
+      {apps.map(app => (
+        <a key={app.id} className="mail-app" href={app.href}>
+          {app.label}
+        </a>
+      ))}
     </div>
   )
 }

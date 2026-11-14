@@ -5923,3 +5923,19 @@ html.sideways body {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); pointer-events: none;
 }
 .offline-note b { font-weight: 600; }
+
+/* after "Email Me a Code": straight to the inbox */
+.mail-apps { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 0.25rem; }
+.mail-app {
+  display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 1.125rem;
+  border-radius: 999px; background: var(--tint-soft); color: var(--tint);
+  font-size: var(--size-body); font-weight: var(--weight-bold); text-decoration: none;
+}
+
+/* the small Privacy Policy link under "Not Now" */
+.save-privacy-link {
+  display: block; margin: 0.25rem auto 0; padding: 0.5rem; border: 0; background: none;
+  color: var(--label-tertiary); font: inherit; font-size: 0.75rem; text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
+}
+.save-privacy { max-height: 70svh; overflow-y: auto; text-align: left; }
+.save-back { display: block; margin: 0 0 0.5rem; padding: 0; }
