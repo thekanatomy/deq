@@ -90,6 +90,7 @@ function Grid({ people, account }) {
         <p className="dk-meta">
           {thisMonth} met in {month} · {late ? `${late} to reach out to` : 'all caught up'}
         </p>
+        <p className="dk-soon">The laptop version is coming soon. For now, open a card on your phone to do more.</p>
         {people.length ? (
           <div className="dk-grid">
             {people.map(person => (

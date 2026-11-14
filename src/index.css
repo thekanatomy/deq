@@ -6025,7 +6025,7 @@ html.sideways body {
 .dk-out { padding: 0; border: 0; background: none; color: #0a84ff; font: inherit; font-weight: 600; cursor: pointer; }
 .dk-wrap { max-width: 1180px; margin: 0 auto; padding: 44px 40px 140px; }
 .dk-h1 { margin: 0; font-size: 40px; font-weight: 700; letter-spacing: -0.03em; }
-.dk-meta { margin: 8px 0 36px; color: #8e8e93; font-size: 17px; }
+.dk-meta { margin: 8px 0 16px; color: #8e8e93; font-size: 17px; }
 .dk-empty { color: #8e8e93; font-size: 17px; }
 .dk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 28px; }
 .dk-card {
@@ -6074,3 +6074,5 @@ html.sideways body {
 .dk-fan-1 { transform: translate(-50%, -50%) translate(150px, 30px) rotate(12deg); }
 .dk-fan-2 { z-index: 2; transform: translate(-50%, -50%); }
 .dk-fan .dk-name { font-size: 32px; }
+
+.dk-soon { display: inline-block; margin: 0 0 32px; padding: 8px 14px; border-radius: 999px; background: #1c1c1e; color: #a1a1a6; font-size: 14px; }
