@@ -32,23 +32,12 @@ const FOLLOW_UPS = [
 
 const DAY = 24 * 60 * 60 * 1000
 
-function lastCalendar() {
-  try {
-    // the last calendar picked, if this phone offers it
-    const saved = localStorage.getItem('deq-remind-with')
-    return CALENDARS.some(calendar => calendar.id === saved) ? saved : null
-  } catch {
-    return null
-  }
-}
-
-function rememberCalendar(id) {
-  try {
-    if (id) localStorage.setItem('deq-remind-with', id)
-    else localStorage.removeItem('deq-remind-with')
-  } catch {
-    // not remembered: harmless
-  }
+// A calendar reminder is chosen per person, never remembered: picking Apple Calendar
+// once used to quietly make a calendar event for everyone added after.
+try {
+  localStorage.removeItem('deq-remind-with') // the old remembered choice, from before
+} catch {
+  // nothing to clear
 }
 
 const SOURCES = { card: 'their card', badge: 'their badge', screen: 'the screen', person: 'the photo', other: 'the photo' }
@@ -68,7 +57,7 @@ export default function AddFlow({ initial: given, recentPlaces, placeCoords, onS
     next: '',
     vibe: 3,
     followUpDays: 7,
-    remindWith: lastCalendar(), // add it to this calendar once the card is saved
+    remindWith: null, // "Just deq" unless you pick a calendar for this person
     ...initial,
   })
   // one card open at a time, Airbnb-style
@@ -234,7 +223,8 @@ export default function AddFlow({ initial: given, recentPlaces, placeCoords, onS
 
   function save() {
     if (!hasName) return
-    const { scanImage: _scanImage, ...kept } = fields
+    // which calendar is a one-time action, not part of the person
+    const { scanImage: _scanImage, remindWith, ...kept } = fields
     const clean = Object.fromEntries(
       Object.entries(kept).map(([key, entry]) => [key, typeof entry === 'string' ? entry.trim() : entry]),
     )
@@ -242,7 +232,7 @@ export default function AddFlow({ initial: given, recentPlaces, placeCoords, onS
     onSave(clean)
     // Google Calendar opens right here, inside the tap on Add, after the save has
     // started: phones only let a tap open another app, and a wait would lose it.
-    if (clean.remindWith && clean.followUpDays) openReminder({ ...clean, lastContacted: Date.now() }, clean.remindWith)
+    if (remindWith && clean.followUpDays) openReminder({ ...clean, lastContacted: Date.now() }, remindWith)
   }
 
   // keep the half-added person on the phone, so leaving the app loses nothing
@@ -602,7 +592,6 @@ export default function AddFlow({ initial: given, recentPlaces, placeCoords, onS
                         className={fields.remindWith === option.id ? 'stack-chip on' : 'stack-chip'}
                         onClick={() => {
                           set('remindWith', option.id)
-                          rememberCalendar(option.id)
                         }}
                       >
                         {option.label}

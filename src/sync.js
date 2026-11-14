@@ -26,7 +26,7 @@ function readBackup() {
     return true
   }
 }
-let state = { user: null, status: 'idle', lastSynced: null, backup: readBackup() } // status: idle | syncing | synced | offline | error
+let state = { user: null, ready: false, status: 'idle', lastSynced: null, backup: readBackup() } // status: idle | syncing | synced | offline | error
 const watchers = new Set()
 function setState(changes) {
   state = { ...state, ...changes }
@@ -225,7 +225,8 @@ if (supabase) {
   supabase.auth.onAuthStateChange((_event, session) => {
     const user = session?.user ?? null
     const changed = user?.id !== state.user?.id
-    setState({ user, status: user ? state.status : 'idle' })
+    // ready: the saved session has been checked, so 'no user' really means signed out
+    setState({ user, ready: true, status: user ? state.status : 'idle' })
     if (user && changed) setTimeout(syncNow) // outside the auth callback, as Supabase advises
   })
   onLocalChange(soon)

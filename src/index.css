@@ -5966,3 +5966,51 @@ html.sideways body {
 @media (prefers-reduced-motion: reduce) {
   .menu-attention, .menu-dot::after { animation: none; }
 }
+
+/* "5 cards on this phone": the number big, the words quiet */
+.save-count { margin: 0.5rem 0 0; color: var(--label-secondary); font-size: var(--size-body); }
+.save-count b { display: block; color: var(--label); font-size: 3.25rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+.save-footnote { max-width: 20rem; margin: 0.75rem auto 0; color: var(--label-tertiary); font-size: 0.8125rem; line-height: 1.4; }
+
+/* ---------- save sheet hero (Fixtured-style): three cards fanned in dotted rings ----------
+   Pure CSS. Only transform and opacity animate, once, on open. */
+.save-sheet .save-title { text-wrap: balance; }
+.save-hero {
+  position: relative; display: grid; place-items: center;
+  height: 13.5rem; margin: 0.25rem -0.25rem 0.75rem; overflow: hidden; border-radius: 1.5rem;
+  background: radial-gradient(120% 90% at 50% 0%, rgba(10, 132, 255, 0.14), rgba(10, 132, 255, 0) 70%);
+}
+.save-ring { position: absolute; left: 50%; top: 50%; border-radius: 50%; border: 1.5px dotted var(--separator); transform: translate(-50%, -50%); }
+.save-ring-outer { width: 21rem; height: 21rem; opacity: 0.7; }
+.save-ring-inner { width: 13.5rem; height: 13.5rem; border-color: rgba(10, 132, 255, 0.45); }
+.save-fan { position: relative; width: 6.75rem; height: 9.5rem; }
+.save-mini {
+  position: absolute; inset: 0; display: block; overflow: hidden; border-radius: 0.9rem;
+  background-size: cover; color: #fff; text-align: left;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22), 0 0 0 0.5px rgba(255, 255, 255, 0.18) inset;
+  animation: save-fan-in 0.7s cubic-bezier(0.32, 0.72, 0, 1) 0.15s both;
+}
+.save-mini-front { z-index: 3; --fan: translate(0, 0) rotate(0deg); }
+.save-mini-left  { z-index: 1; --fan: translate(-3.6rem, 0.6rem) rotate(-11deg) scale(0.9); filter: brightness(0.92); }
+.save-mini-right { z-index: 2; --fan: translate(3.6rem, 0.6rem) rotate(11deg) scale(0.9); filter: brightness(0.92); }
+.save-mini { transform: var(--fan); }
+@keyframes save-fan-in { from { transform: translate(0, 0.75rem) scale(0.92); opacity: 0; } to { transform: var(--fan); opacity: 1; } }
+.save-mini-co { position: absolute; left: 0.55rem; top: 0.5rem; max-width: 3.6rem; overflow: hidden; font-size: 0.625rem; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; }
+.save-mini-av {
+  position: absolute; right: 0.45rem; top: 0.4rem; display: grid; place-items: center;
+  width: 1.4rem; height: 1.4rem; border-radius: 50%; background: #f2eeea; color: #1d1d1f; font-size: 0.5rem; font-weight: 700;
+}
+.save-mini-name {
+  position: absolute; left: 0.55rem; right: 0.5rem; bottom: 0.55rem;
+  font-size: 0.875rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.save-badge {
+  position: absolute; z-index: 4; right: -0.7rem; bottom: -0.7rem; display: grid; place-items: center;
+  min-width: 2rem; height: 2rem; padding: 0 0.45rem; border-radius: 999px;
+  background: var(--label); color: var(--bg); font-size: 0.9375rem; font-weight: 800; font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 3px var(--bg);
+  animation: save-badge-in 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) 0.6s both;
+}
+@keyframes save-badge-in { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .save-mini, .save-badge { animation: none; } }

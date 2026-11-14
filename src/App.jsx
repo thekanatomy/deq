@@ -311,10 +311,9 @@ export default function App() {
     setAddedId(id)
     setView('deck')
 
-    // At 5 people, ask once to sign in so they're backed up (again 10 people later if you said not now).
     const count = await db.cards.filter(visible).count()
-    // From the 5th person: first "don't lose these people" (sign in), then the Home Screen.
-    if (accountsEnabled && !account.user && count >= nextSaveAsk()) pendingSave.current = true
+    // Not signed in: the sign-in sheet once a day (if it hasn't shown yet today), then the Home Screen.
+    if (accountsEnabled && !account.user && !askedToday()) pendingSave.current = true
     else if (count >= 5 && wantsHomeTip()) pendingHome.current = true
   }
 
@@ -364,6 +363,24 @@ export default function App() {
       window.removeEventListener('orientationchange', check)
     }
   }, [])
+
+  // Not signed in yet: the sign-in sheet once a day, a moment after deq opens on the deck
+  // (and again when you come back to it on a new day). Stops for good once you sign in.
+  const [dayTick, setDayTick] = useState(0)
+  useEffect(() => {
+    const wake = () => document.visibilityState === 'visible' && setDayTick(tick => tick + 1)
+    document.addEventListener('visibilitychange', wake)
+    return () => document.removeEventListener('visibilitychange', wake)
+  }, [])
+  const calm = view === 'deck' && !askToSave && !homeTip && !gateApp && !incoming && !watchIntro && !addedId && !menuOpen
+  useEffect(() => {
+    if (!accountsEnabled || !account.ready || account.user || !everyone.length || !calm || askedToday()) return
+    const timer = setTimeout(() => setAskToSave('save'), 1200)
+    return () => clearTimeout(timer)
+  }, [account.ready, account.user, everyone.length, calm, dayTick])
+  useEffect(() => {
+    if (askToSave === 'save') markAsked()
+  }, [askToSave])
 
   return (
     <MotionConfig reducedMotion="user">
@@ -757,7 +774,6 @@ export default function App() {
             people={everyone}
             onClose={() => {
               if (askToSave === 'save') {
-                laterSaveAsk(everyone.length)
                 // "Not now" to signing in: still offer the Home Screen, so the cards
                 // at least survive on this phone
                 if (wantsHomeTip()) setTimeout(() => setHomeTip(true), 600)
@@ -850,20 +866,20 @@ function wantsHomeTip() {
   return !isStandalone() && !recall('deq-home-tip', true)
 }
 
-// When to ask to sign in: at 5 people, then 10 more after each "Not now".
-function nextSaveAsk() {
+// Until you sign in, the sign-in sheet comes up once a day (local calendar day).
+const today = () => new Date().toLocaleDateString('en-CA') // YYYY-MM-DD
+function askedToday() {
   try {
-    return Number(localStorage.getItem('deq-save-ask-at')) || 5
+    return localStorage.getItem('deq-save-asked-on') === today()
   } catch {
-    return 5
+    return false
   }
 }
-
-function laterSaveAsk(count) {
+function markAsked() {
   try {
-    localStorage.setItem('deq-save-ask-at', String(count + 10))
+    localStorage.setItem('deq-save-asked-on', today())
   } catch {
-    // private browsing: it asks again next time
+    // private browsing: it may ask again sooner
   }
 }
 
