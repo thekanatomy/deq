@@ -13,7 +13,8 @@ export default async function handler(req, res) {
     }
     const pass = await makePass(code)
     res.setHeader('Content-Type', 'application/vnd.apple.pkpass')
-    res.setHeader('Content-Disposition', 'attachment; filename="deq.pkpass"')
+    // inline, not attachment: Safari shows the pass itself instead of asking whether to download it
+    res.setHeader('Content-Disposition', 'inline; filename="deq.pkpass"')
     res.setHeader('Cache-Control', 'private, max-age=0')
     res.status(200).send(pass)
   } catch (error) {
