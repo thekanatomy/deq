@@ -34,7 +34,13 @@ export default function SignIn() {
       setState('sent')
     } catch (error) {
       setState('failed')
-      setMessage(/rate|seconds/i.test(error.message) ? 'Wait a minute, then try again.' : 'Couldn’t send the email. Try again.')
+      // Supabase allows one code per email per minute: "...only request this after 42 seconds."
+      const wait = error.message?.match(/(\d+)\s*second/i)?.[1]
+      setMessage(
+        /rate|second/i.test(error.message)
+          ? `A code was just sent, so check your email. You can ask for a new one in ${wait ? `${wait} seconds` : 'a minute'}.`
+          : 'Couldn’t send the email. Try again.',
+      )
     }
   }
 
@@ -109,7 +115,7 @@ export default function SignIn() {
           inputMode="email"
           autoComplete="email"
           autoCapitalize="off"
-          placeholder="you@asu.edu"
+          placeholder="name@mail.com"
           enterKeyHint="send"
           value={email}
           onChange={event => {
