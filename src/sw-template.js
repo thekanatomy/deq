@@ -4,7 +4,9 @@
 // deq.one) does the phone open the copy it kept. Your cards already live on the phone.
 const VERSION = '__VERSION__'
 const ASSETS = __ASSETS__
-const CACHE = `deq-${VERSION}`
+// newest first when sorted: the build time leads the name
+const CACHE = `deq-__BUILT__-${VERSION}`
+const KEEP = 3
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -21,7 +23,9 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     (async () => {
-      for (const key of await caches.keys()) if (key.startsWith('deq-') && key !== CACHE) await caches.delete(key)
+      // keep the last few versions: a phone still running an older one can load its own files
+      const versions = (await caches.keys()).filter(key => key.startsWith('deq-')).sort().reverse()
+      for (const key of versions.slice(KEEP)) await caches.delete(key)
       await self.clients.claim()
     })(),
   )

@@ -96,6 +96,8 @@ export async function removeCard(id) {
 // ---------- syncing ----------
 let running = null
 let again = false
+// right after signing in: bring down every card in the account, whatever this phone saw before
+let fullPull = false
 
 export function syncNow() {
   if (!state.user || !state.backup) return Promise.resolve()
@@ -106,11 +108,20 @@ export function syncNow() {
   running = (async () => {
     setState({ status: 'syncing' })
     try {
+      let failed = null
       do {
         again = false
-        await push(state.user.id)
-        await pull(state.user.id)
+        // send this phone's cards, then bring down the account's: one problem while
+        // sending must never stop the other phone's cards from arriving
+        try {
+          await push(state.user.id)
+        } catch (error) {
+          failed = error
+        }
+        await pull(state.user.id, fullPull)
+        fullPull = false
       } while (again)
+      if (failed) throw failed
       setState({ status: 'synced', lastSynced: Date.now() })
     } catch (error) {
       console.error('Sync failed', error)
@@ -137,9 +148,10 @@ async function push(userId) {
     if (deleted) {
       if (photoPath) await supabase.storage.from(BUCKET).remove([photoPath])
     } else if (photo instanceof Blob && !photoPath) {
+      // a photo that won't upload never holds the card back: the card goes now, the photo next time
       const { error } = await supabase.storage.from(BUCKET).upload(path, photo, { upsert: true, contentType: 'image/jpeg' })
-      if (error) throw error
-      photoPath = path
+      if (error) console.warn('Photo upload failed, will retry', error)
+      else photoPath = path
     } else if (!photo && photoPath) {
       // the photo was removed (e.g. it turned out to be a business card)
       await supabase.storage.from(BUCKET).remove([photoPath])
@@ -153,27 +165,37 @@ async function push(userId) {
       updated_at: new Date(card.updatedAt).toISOString(),
       deleted: Boolean(deleted),
     })
-    done.push({ id, updatedAt: card.updatedAt, photoPath, deleted })
+    done.push({ id, uid: card.uid, updatedAt: card.updatedAt, photoPath, deleted })
   }
 
-  const { error } = await supabase.from('cards').upsert(rows)
-  if (error) throw error
+  let sendError = null
+  const sent = new Set()
+  for (let index = 0; index < rows.length; index += 50) {
+    const batch = rows.slice(index, index + 50)
+    const { error } = await supabase.from('cards').upsert(batch)
+    if (error) sendError = error
+    else batch.forEach(row => sent.add(row.id))
+  }
 
   // Mark them synced, unless they were edited again while this was sending.
   await db.transaction('rw', db.cards, async () => {
     for (const item of done) {
+      if (!sent.has(item.uid)) continue
       const card = await db.cards.get(item.id)
       if (!card || card.updatedAt !== item.updatedAt) continue
       if (item.deleted) await db.cards.delete(item.id)
+      // a photo still waiting to upload keeps the card marked, so it's tried again
+      else if (card.photo instanceof Blob && !item.photoPath) continue
       else await db.cards.update(item.id, { dirty: 0, photoPath: item.photoPath })
     }
   })
+  if (sendError) throw sendError
 }
 
 // Brings down everything that changed in your account since the last time.
-async function pull(userId) {
+async function pull(userId, everything = false) {
   const mark = `deq-pulled-${userId}`
-  let since = localStorage.getItem(mark) ?? '1970-01-01T00:00:00Z'
+  let since = (!everything && localStorage.getItem(mark)) || '1970-01-01T00:00:00Z'
 
   for (;;) {
     const { data: rows, error } = await supabase
@@ -205,8 +227,12 @@ async function apply(row) {
   const { photoPath = null, ...data } = row.data
   let photo = local?.photoPath === photoPath ? local?.photo : undefined
   if (photoPath && !photo) {
-    const { data: blob } = await supabase.storage.from(BUCKET).download(photoPath)
-    photo = blob ?? undefined
+    try {
+      const { data: blob } = await supabase.storage.from(BUCKET).download(photoPath)
+      photo = blob ?? undefined
+    } catch {
+      photo = undefined // the card comes now; its photo on a later sync
+    }
   }
 
   const card = { ...data, uid: row.id, photoPath, photo, updatedAt: remoteTime, dirty: 0, deleted: 0 }
@@ -227,8 +253,14 @@ if (supabase) {
     const changed = user?.id !== state.user?.id
     // ready: the saved session has been checked, so 'no user' really means signed out
     setState({ user, ready: true, status: user ? state.status : 'idle' })
-    if (user && changed) setTimeout(syncNow) // outside the auth callback, as Supabase advises
+    if (user && changed) {
+      fullPull = true
+      setTimeout(syncNow) // outside the auth callback, as Supabase advises
+    }
   })
+  // while deq is open, check for cards added on your other phones every 20 seconds
+  setInterval(() => document.visibilityState === 'visible' && state.user && syncNow(), 20_000)
+  window.addEventListener('pageshow', soon)
   onLocalChange(soon)
   window.addEventListener('online', soon)
   document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && soon())

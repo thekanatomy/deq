@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/inter'
 import './index.css'
 import App from './App.jsx'
+import { watchForUpdates } from './update'
 import { busy } from './draft'
 
 // After a new version goes live, a tab opened earlier still asks for the old
@@ -53,6 +54,7 @@ if (import.meta.env.PROD) {
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}))
 }
+watchForUpdates()
 
 // which version is running, for checking a phone: open the browser's console
 console.info(`deq build ${__BUILD__}`)

@@ -86,6 +86,7 @@ function offlineCopy() {
       const version = createHash('sha1').update(assets.join('\n')).digest('hex').slice(0, 10)
       const source = readFileSync('src/sw-template.js', 'utf8')
         .replace('__VERSION__', version)
+        .replace('__BUILT__', String(Date.now()))
         .replace('__ASSETS__', JSON.stringify(assets))
       this.emitFile({ type: 'asset', fileName: 'sw.js', source })
     },
