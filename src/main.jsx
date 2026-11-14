@@ -1,4 +1,4 @@
-import { Component, StrictMode } from 'react'
+import { Component, StrictMode, Suspense, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/inter'
 import './index.css'
@@ -75,10 +75,24 @@ class ErrorScreen extends Component {
   }
 }
 
+// A laptop or desktop (wide screen, a mouse) gets its own face: cards side by side
+// and a nudge to the phone. Shared-card links (#add=) still open the normal app.
+const Desktop = lazy(() => import('./Desktop.jsx'))
+const onDesktop =
+  window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine)').matches &&
+  !/#add=/.test(window.location.hash) &&
+  !new URLSearchParams(window.location.search).has('mobile')
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorScreen>
-      <App />
+      {onDesktop ? (
+        <Suspense fallback={null}>
+          <Desktop />
+        </Suspense>
+      ) : (
+        <App />
+      )}
     </ErrorScreen>
   </StrictMode>,
 )
