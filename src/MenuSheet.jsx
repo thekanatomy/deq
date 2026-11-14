@@ -44,7 +44,7 @@ export default function MenuSheet({ count, onMyCard, onClose }) {
     { id: 'privacy', label: 'Privacy', detail: 'On this phone first' },
     account.user
       ? { id: 'account', label: 'Account', detail: account.user.email }
-      : { id: 'account', label: 'Sign In', detail: 'Back up your deq' },
+      : { id: 'account', label: 'Sign In', detail: 'Back up your deq', alert: accountsEnabled },
     { id: 'card', label: 'Your Card', detail: 'Apple Wallet' },
     { id: 'about', label: 'About Deq' },
   ]
@@ -98,8 +98,8 @@ export default function MenuSheet({ count, onMyCard, onClose }) {
                 onClick={() => (row.id === 'card' ? onMyCard() : setPage(row.id))}
                 {...cascade(index)}
               >
-                <span>{row.label}</span>
-                {row.detail && <span className="menu-detail">{row.detail}</span>}
+                <span className={row.alert ? 'menu-alert' : undefined}>{row.label}</span>
+                {row.detail && <span className={row.alert ? 'menu-detail menu-alert' : 'menu-detail'}>{row.detail}</span>}
                 <Chevron />
               </motion.button>
             ))}

@@ -5939,3 +5939,30 @@ html.sideways body {
 }
 .save-privacy { max-height: 70svh; overflow-y: auto; text-align: left; }
 .save-back { display: block; margin: 0 0 0.5rem; padding: 0; }
+
+/* Not backed up yet: the menu button gets Apple's orange dot. It hops and pulses
+   three times when deq opens, then sits still (only transform and opacity move). */
+.menu-attention { position: relative; animation: menu-hop 0.9s cubic-bezier(0.3, 0.7, 0.3, 1) 1.2s 3 both; }
+@keyframes menu-hop {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-5px); }
+  55% { transform: translateY(0); }
+  70% { transform: translateY(-2px); }
+}
+.menu-dot {
+  position: absolute; top: 0.5rem; right: 0.6rem;
+  width: 0.5rem; height: 0.5rem; border-radius: 50%;
+  background: #ff9f0a;
+}
+.menu-dot::after {
+  content: ''; position: absolute; inset: 0; border-radius: 50%; background: #ff9f0a;
+  animation: menu-pulse 1.8s ease-out 1.2s 3;
+}
+@keyframes menu-pulse {
+  from { transform: scale(1); opacity: 0.7; }
+  to { transform: scale(3); opacity: 0; }
+}
+.menu-alert { color: #ff9f0a !important; }
+@media (prefers-reduced-motion: reduce) {
+  .menu-attention, .menu-dot::after { animation: none; }
+}

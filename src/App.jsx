@@ -445,8 +445,14 @@ export default function App() {
                         <CategoriesIcon />
                       </button>
                     )}
-                    <button aria-label="Menu" onClick={() => setMenuOpen(true)}>
+                    {/* not backed up yet: an orange dot that hops and pulses a few times, then rests */}
+                    <button
+                      aria-label={accountsEnabled && !account.user ? 'Menu, sign in to back up' : 'Menu'}
+                      className={accountsEnabled && !account.user ? 'menu-attention' : undefined}
+                      onClick={() => setMenuOpen(true)}
+                    >
                       <MoreIcon />
+                      {accountsEnabled && !account.user && <span className="menu-dot" aria-hidden="true" />}
                     </button>
                   </div>
                 </motion.div>
