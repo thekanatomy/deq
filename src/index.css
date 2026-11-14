@@ -5200,7 +5200,9 @@ html.sideways body {
 }
 
 /* the countdown after the label, quieter than it */
-.xcard-days-detail { opacity: 0.7; }
+/* Apple's subtitle: smaller and a shade dimmer than the name (Wallet, Contacts) */
+.xcard-days:not(.late) { color: rgba(255, 255, 255, 0.85); }
+.xcard-days-detail { opacity: 0.65; }
 
 /* gone cold: the card's colour drains away until you speak again */
 .xcard.cold { filter: saturate(0.15) brightness(0.8); }
