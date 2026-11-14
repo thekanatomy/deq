@@ -18,7 +18,7 @@ function fromBase64Url(code) {
 
 // short keys keep the QR code small and easy to scan
 export function cardCode(me) {
-  const short = { n: me.name, r: me.role, c: me.company, l: me.linkedin, e: me.email }
+  const short = { n: me.name, r: me.role, c: me.company, l: me.linkedin, e: me.email, p: me.phone }
   for (const key of Object.keys(short)) if (!short[key]) delete short[key]
   return toBase64Url(JSON.stringify(short))
 }
@@ -32,9 +32,9 @@ export function readCard(text) {
   const match = String(text).match(/#add=([A-Za-z0-9_-]+)/) ?? String(text).match(/^([A-Za-z0-9_-]{8,})$/)
   if (!match) return null
   try {
-    const { n, r, c, l, e } = JSON.parse(fromBase64Url(match[1]))
+    const { n, r, c, l, e, p } = JSON.parse(fromBase64Url(match[1]))
     if (!n) return null
-    return { name: n, role: r ?? '', company: c ?? '', linkedin: l ?? '', email: e ?? '' }
+    return { name: n, role: r ?? '', company: c ?? '', linkedin: l ?? '', email: e ?? '', phone: p ?? '' }
   } catch {
     return null
   }

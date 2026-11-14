@@ -4268,7 +4268,44 @@ html.sideways body {
 }
 
 .shared-card {
-  width: min(78vw, 20rem);
+  /* leaves room for the contact buttons under it, even on a small phone */
+  width: min(70vw, 18.5rem, calc((100svh - 22rem) / 1.4));
+}
+
+/* their contact details, one tap each, like the buttons on an iPhone contact */
+.shared-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.875rem;
+}
+
+.shared-action {
+  display: grid;
+  justify-items: center;
+  gap: 0.375rem;
+  width: 4.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.shared-action span {
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.shared-action:active span {
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .shared-card .xcard {

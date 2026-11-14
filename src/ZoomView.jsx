@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { CALENDARS, followUpWindow, openReminder } from './calendar'
 import { brandStyle } from './brands'
 import { db } from './db'
+import { saveContact } from './contact'
 import DeqCard from './DeqCard'
 import { CloseIcon } from './icons'
 import { companyOf, roleOf } from './text'
@@ -70,25 +71,9 @@ export default function ZoomView({ person, onClose }) {
   const [choosing, setChoosing] = useState(false)
   const calendars = CALENDARS.map(calendar => ({ ...calendar, run: () => openReminder(person, calendar.id) }))
 
-  function saveContact() {
-    // a vCard: iPhone shows "Create New Contact" with everything filled in
-    const [given, ...rest] = person.name.split(' ')
-    const vcf = [
-      'BEGIN:VCARD',
-      'VERSION:3.0',
-      `N:${rest.join(' ')};${given};;;`,
-      `FN:${person.name}`,
-      companyOf(person) && `ORG:${person.company}`,
-      roleOf(person) && `TITLE:${person.role}`,
-      person.email && `EMAIL:${person.email}`,
-      person.phone && `TEL;TYPE=CELL:${person.phone}`,
-      person.linkedin && `URL:${linkedinUrl(person.linkedin)}`,
-      `NOTE:${followUpText(person).replace(/\n/g, '\\n')}`,
-      'END:VCARD',
-    ]
-      .filter(Boolean)
-      .join('\r\n')
-    window.location.href = `data:text/vcard;charset=utf-8,${encodeURIComponent(vcf)}`
+  function saveContactCard() {
+    // served from deq.one: iPhone shows "Create New Contact" with everything filled in
+    saveContact({ ...person, company: companyOf(person) && person.company, role: roleOf(person) && person.role }, followUpText(person))
   }
 
   async function share() {
@@ -138,7 +123,7 @@ export default function ZoomView({ person, onClose }) {
     phone && { id: 'call', label: 'Call', icon: <PhoneIcon />, href: `tel:${phone}` },
     phone && { id: 'message', label: 'Message', icon: <BubbleIcon />, href: `sms:${phone}` },
     phone && { id: 'whatsapp', label: 'WhatsApp', icon: <BubbleIcon />, href: `https://wa.me/${phone.replace(/^\+/, '')}` },
-    { id: 'contact', label: 'Save Contact', icon: <PersonPlusIcon />, run: saveContact },
+    { id: 'contact', label: 'Save Contact', icon: <PersonPlusIcon />, run: saveContactCard },
     { id: 'share', label: 'Share', icon: <ShareIcon />, run: share },
   ].filter(Boolean)
 

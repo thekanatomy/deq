@@ -14,9 +14,9 @@ export class PassError extends Error {
 
 function decode(code) {
   const json = Buffer.from(code.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')
-  const { n, r, c, l, e } = JSON.parse(json)
+  const { n, r, c, l, e, p } = JSON.parse(json)
   if (!n) throw new PassError(400, 'The card needs a name')
-  return { name: n, role: r, company: c, linkedin: l, email: e }
+  return { name: n, role: r, company: c, linkedin: l, email: e, phone: p }
 }
 
 // The pass: works on every WalletWallet plan.
@@ -24,6 +24,7 @@ function passBody(card, code) {
   const back = [
     card.linkedin && { label: 'LinkedIn', value: card.linkedin },
     card.email && { label: 'Email', value: card.email },
+    card.phone && { label: 'Phone', value: card.phone },
     { label: 'About deq', value: 'Scan the code to add me to your deq. deq.one keeps everyone you meet as a card.' },
   ].filter(Boolean)
   return {

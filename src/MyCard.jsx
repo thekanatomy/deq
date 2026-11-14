@@ -12,6 +12,7 @@ const FIELDS = [
   { key: 'company', label: 'Company', placeholder: 'Arizona State University', autoCapitalize: 'words' },
   { key: 'linkedin', label: 'LinkedIn', placeholder: 'linkedin.com/in/you', autoCapitalize: 'none' },
   { key: 'email', label: 'Email', placeholder: 'you@asu.edu', type: 'email', autoCapitalize: 'none' },
+  { key: 'phone', label: 'Phone', placeholder: 'Optional', type: 'tel', autoCapitalize: 'none' },
 ]
 
 // Your own card: what people get when they scan you. It goes into Apple Wallet or
@@ -97,7 +98,7 @@ export default function MyCard({ owner, onClose }) {
             <label key={field.key} className="mycard-field">
               <span>{field.label}</span>
               <input
-                value={me[field.key]}
+                value={me[field.key] ?? ''}
                 placeholder={field.placeholder}
                 type={field.type ?? 'text'}
                 autoCapitalize={field.autoCapitalize ?? 'sentences'}
