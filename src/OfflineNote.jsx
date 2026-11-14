@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 
-// An orange pill in the top-left corner, there until the connection is back, when deq.one can't be reached: offline, or a Wi-Fi that blocks it
+// An orange pill at the top centre, there until the connection is back, when deq.one can't be reached: offline, or a Wi-Fi that blocks it
 // (the phone still shows Wi-Fi then, so deq asks /api/ping instead of trusting it).
 // Cards work anyway; only scanning, wallet passes, maps and place search need the network.
 async function reachable() {

@@ -5911,13 +5911,15 @@ html.sideways body {
 }
 
 
-/* deq.one can't be reached: an orange pill in the top-left corner, there until it's back */
+/* deq.one can't be reached: an orange pill at the top centre, there until it's back */
 .offline-note {
-  position: fixed; left: 1rem; top: calc(env(safe-area-inset-top) + 3.75rem); z-index: 400;
+  /* top centre, in the gap above the header so it covers nothing */
+  position: fixed; left: 0; right: 0; top: calc(env(safe-area-inset-top) + 0.25rem); z-index: 400;
+  margin-inline: auto;
   width: max-content; max-width: calc(100% - 2rem);
-  padding: 0.5rem 0.875rem; border: 0; border-radius: 999px;
+  padding: 0.25rem 0.75rem; border: 0; border-radius: 999px;
   background: #ff9f0a; color: #1d1d1f; /* Apple's system orange, dark text so it reads */
-  font: inherit; font-size: 0.8125rem; font-weight: 500; line-height: 1.3; text-align: center;
+  font: inherit; font-size: 0.75rem; font-weight: 500; line-height: 1.3; text-align: center;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); pointer-events: none;
 }
 .offline-note b { font-weight: 600; }
