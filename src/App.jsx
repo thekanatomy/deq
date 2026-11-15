@@ -91,7 +91,11 @@ export default function App() {
   // iOS Safari can drop the connection to the phone's database after the tab sleeps
   // ("Connection to Indexed Database server lost"). Reopen it and try again instead of crashing.
   const people = useLiveQuery(async () => {
-    const read = () => db.cards.orderBy('lastContacted').reverse().filter(visible).toArray()
+    // news first (a reason to reach out), then the usual order
+    const read = async () => {
+      const cards = await db.cards.orderBy('lastContacted').reverse().filter(visible).toArray()
+      return [...cards.filter(card => card.pulse?.news), ...cards.filter(card => !card.pulse?.news)]
+    }
     try {
       return await read()
     } catch (error) {

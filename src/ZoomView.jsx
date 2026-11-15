@@ -6,6 +6,7 @@ import { brandStyle } from './brands'
 import { db } from './db'
 import { saveContact } from './contact'
 import DeqCard from './DeqCard'
+import PulsePanel from './PulsePanel'
 import { CloseIcon } from './icons'
 import { companyOf, roleOf } from './text'
 
@@ -225,6 +226,11 @@ export default function ZoomView({ person, onClose }) {
           <button className="zoom-next-button" onClick={() => setChoosing(true)}>
             Remind
           </button>
+        </motion.div>
+
+        {/* pulse: what changed in their world, and an opening line */}
+        <motion.div {...item(3)}>
+          <PulsePanel person={person} />
         </motion.div>
 
         {/* 2 · what to talk about */}

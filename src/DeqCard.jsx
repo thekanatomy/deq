@@ -165,7 +165,15 @@ function DeqCard({ person, interactive = true, open = true }) {
             transition={FADE}
           >
             <header className="xcard-top">
-              <span className="xcard-company big">{companyOf(person) || 'Deq'}</span>
+              <span className="xcard-company big">
+                {companyOf(person) || 'Deq'}
+                {person.pulse?.news && (
+                  <span className="xcard-pulse big">
+                    <i aria-hidden="true" />
+                    Pulse
+                  </span>
+                )}
+              </span>
               {interactive ? (
                 <button
                   className="avatar-button"
@@ -295,7 +303,14 @@ function DeqCard({ person, interactive = true, open = true }) {
                 {avatar}
                 <span className="xcard-role">{roleOf(person) || 'Contact'}</span>
               </div>
-              <span className="xcard-company">{companyOf(person)}</span>
+              {person.pulse?.news ? (
+                <span className="xcard-pulse">
+                  <i aria-hidden="true" />
+                  Pulse
+                </span>
+              ) : (
+                <span className="xcard-company">{companyOf(person)}</span>
+              )}
             </header>
             <h2 className="xcard-name">{person.name}</h2>
             <p className={status === 'late' ? 'xcard-days late' : 'xcard-days'}>

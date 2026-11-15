@@ -19,6 +19,7 @@ function devApi() {
         'GEMINI_API_KEY',
         'GEMINI_MODEL',
         'GEMINI_BACKUP_MODEL',
+        'GEMINI_PULSE_MODEL',
         'WALLETWALLET_API_KEY',
       ]) if (env[key]) process.env[key] = env[key]
 
@@ -40,6 +41,22 @@ function devApi() {
       })
 
       // GET /api/ics?… : a calendar event for Apple Calendar, same code as on Vercel
+      server.middlewares.use('/api/pulse', async (req, res) => {
+        const send = (status, body) => {
+          res.statusCode = status
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify(body))
+        }
+        try {
+          let raw = ''
+          for await (const chunk of req) raw += chunk
+          const { sweep } = await server.ssrLoadModule('/api/_pulse.js')
+          send(200, await sweep(JSON.parse(raw || '{}')))
+        } catch (error) {
+          send(error.status ?? 500, { error: error.message })
+        }
+      })
+
       server.middlewares.use('/api/ics', async (req, res) => {
         try {
           const query = Object.fromEntries(new URL(req.url, 'https://localhost').searchParams)
