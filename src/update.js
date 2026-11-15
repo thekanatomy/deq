@@ -43,8 +43,33 @@ export async function checkForUpdate() {
   if (await newerVersion()) reloadWhenFree()
 }
 
+// The Home Screen app: every time you come back to it, it reloads fresh (after a minute
+// away, so switching apps for a second doesn't flash). A blank screen also reloads.
+const standalone = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true
+let hiddenAt = 0
+
+function freshOnReturn() {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') hiddenAt = Date.now()
+    else if (hiddenAt && Date.now() - hiddenAt > 60 * 1000) reloadWhenFree()
+  })
+  window.addEventListener('pageshow', event => event.persisted && reloadWhenFree())
+}
+
+function reloadIfBlank() {
+  setTimeout(() => {
+    const root = document.getElementById('root')
+    if (root && !root.children.length && !sessionStorage.getItem('deq-blank-reload')) {
+      sessionStorage.setItem('deq-blank-reload', '1') // once, so a real failure can't loop
+      window.location.reload()
+    }
+  }, 4000)
+}
+
 export function watchForUpdates() {
   if (!import.meta.env.PROD) return
+  reloadIfBlank()
+  if (standalone) freshOnReturn()
   setTimeout(checkForUpdate, 3000)
   document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && checkForUpdate())
   window.addEventListener('pageshow', event => event.persisted && checkForUpdate())

@@ -16,6 +16,7 @@ const FIELDS = [
 const CONTACT = [
   { key: 'linkedin', label: 'LinkedIn', placeholder: 'Username or link', autoCapitalize: 'none' },
   { key: 'email', label: 'Email', placeholder: 'name@company.com', type: 'email', autoCapitalize: 'none' },
+  { key: 'phone', label: 'Phone', placeholder: '+1 480 555 0123', type: 'tel', autoCapitalize: 'none' },
 ]
 
 export default function CardForm({ initial, title, subtitle, submitLabel, recentPlaces = [], onSave, onClose }) {
@@ -26,6 +27,7 @@ export default function CardForm({ initial, title, subtitle, submitLabel, recent
     place: '',
     linkedin: '',
     email: '',
+    phone: '',
     note: '',
     ...initial,
   })

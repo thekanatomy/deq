@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react'
+import { exportDeck } from './exportDeck'
 import Privacy from './Privacy'
 import { useState } from 'react'
 import { BackIcon, CloseIcon } from './icons'
@@ -47,6 +48,7 @@ export default function MenuSheet({ count, onMyCard, onClose }) {
       ? { id: 'account', label: 'Account', detail: account.user.email }
       : { id: 'account', label: 'Sign In', detail: 'Back up your deq', alert: accountsEnabled },
     { id: 'card', label: 'Your Card', detail: isAndroid ? 'Google Wallet' : isIOS ? 'Apple Wallet' : 'Wallet' },
+    { id: 'export', label: 'Export Deck', detail: 'Excel (CSV)' },
     { id: 'about', label: 'About Deq' },
   ]
 
@@ -96,7 +98,7 @@ export default function MenuSheet({ count, onMyCard, onClose }) {
               <motion.button
                 key={row.id}
                 className="menu-row"
-                onClick={() => (row.id === 'card' ? onMyCard() : setPage(row.id))}
+                onClick={() => (row.id === 'card' ? onMyCard() : row.id === 'export' ? exportDeck() : setPage(row.id))}
                 {...cascade(index)}
               >
                 <span className={row.alert ? 'menu-alert' : undefined}>{row.label}</span>

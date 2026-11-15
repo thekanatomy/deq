@@ -189,10 +189,8 @@ export default function App() {
   const [addedId, setAddedId] = useState(null)
   // the card you just added: until you close it, it carries a LinkedIn button and a hint
   const [freshId, setFreshId] = useState(null)
-  // the full-details view: flyId gives the tapped card its shared-layout id one frame
-  // before the details open, so the card flies out of the deck instead of popping in
+  // the full-details view: it rises over the deck with a blur, the deck stays put
   const [zoomId, setZoomId] = useState(null)
-  const [flyId, setFlyId] = useState(null)
   const [editId, setEditId] = useState(null)
   const zoomed = Boolean(zoomId)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -264,14 +262,12 @@ export default function App() {
 
   // a tap goes straight to the full details (no in-between "open card" step)
   function openCard(id) {
-    setFlyId(id)
     setEditId(null)
-    requestAnimationFrame(() => requestAnimationFrame(() => setZoomId(id)))
+    setZoomId(id)
   }
 
   function closeZoom() {
     setZoomId(null)
-    setTimeout(() => setFlyId(null), 700)
   }
 
   // Back on the phone closes the top layer instead of leaving deq (the add flow handles its own steps)
@@ -333,8 +329,8 @@ export default function App() {
   }
 
   async function saveEdit(fields) {
-    const { name, role, company, place, linkedin, email, note } = fields
-    await db.cards.update(open.id, withShortText({ name, role, company, place, linkedin, email, note }))
+    const { name, role, company, place, linkedin, email, phone, note } = fields
+    await db.cards.update(open.id, withShortText({ name, role, company, place, linkedin, email, phone, note }))
     setDraft({})
     setView('deck')
   }
@@ -585,20 +581,9 @@ export default function App() {
                   }
                 }}
               >
-                {person.id === zoomId ? (
-                  <div className="card-placeholder" />
-                ) : (
-                  // Only the open card needs a shared-layout id (for flying into the zoom view).
-                  // Giving every card one made the animation library re-measure the whole deck on
-                  // every frame, which is what made opening a card stutter.
-                  <motion.div layoutId={selected || person.id === flyId ? `card-${person.id}` : undefined} transition={SPRING}>
-                    <DeqCard
-                      person={person}
-                      interactive={selected}
-                      open={selected || (!isOpen && index === list.length - 1)}
-                    />
-                  </motion.div>
-                )}
+                {/* no shared-layout flight: measuring a card inside the moving deck is what
+                    made the transition cut out. The details rise over the deck instead. */}
+                <DeqCard person={person} interactive={selected} open={selected || (!isOpen && index === list.length - 1)} />
                 {/* a quiet hint above the open card, until you've used it a few times */}
                 <AnimatePresence>
                   {selected && !zoomed && showZoomHint && (
