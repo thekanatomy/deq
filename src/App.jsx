@@ -257,14 +257,15 @@ export default function App() {
   const added = list.find(person => person.id === addedId)
   const openLook = open ? { backgroundImage: meshImage(open.company) } : null
 
+  // a tap goes straight to the full details (no in-between "open card" step)
   function openCard(id) {
     setOpenId(id)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    setZoomed(true)
   }
 
   // Back on the phone closes the top layer instead of leaving deq (the add flow handles its own steps)
   useBack(Boolean(openId), () => closeCard())
-  useBack(zoomed, () => setZoomed(false))
+  useBack(zoomed, () => { setZoomed(false); setOpenId(null) })
   useBack(detailsOpen, () => setDetailsOpen(false))
   useBack(view === 'scan' || view === 'edit', () => setView('deck'))
   useBack(menuOpen, () => setMenuOpen(false))
@@ -793,7 +794,7 @@ export default function App() {
           />
         )}
         {gateApp && <InAppGate key="gate" app={gateApp} onContinue={() => setGateApp(null)} />}
-        {zoomed && open && <ZoomView key="zoom" person={open} onClose={() => setZoomed(false)} />}
+        {zoomed && open && <ZoomView key="zoom" person={open} onClose={() => { setZoomed(false); setOpenId(null) }} />}
         {askToSave && !account.user && (
           <SaveSheet
             key="save"
