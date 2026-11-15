@@ -118,11 +118,9 @@ class ErrorScreen extends Component {
 
 // A laptop or desktop (wide screen, a mouse) gets its own face: cards side by side
 // and a nudge to the phone. Shared-card links (#add=) still open the normal app.
+// deq pulse: no laptop face. The phone layout shows everywhere, so a PC can preview it.
 const Desktop = lazy(() => import('./Desktop.jsx'))
-const onDesktop =
-  window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine)').matches &&
-  !/#add=/.test(window.location.hash) &&
-  !new URLSearchParams(window.location.search).has('mobile')
+const onDesktop = false
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
