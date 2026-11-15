@@ -6101,3 +6101,32 @@ html.sideways body {
 }
 .fresh-linkedin:active { transform: scale(0.97); }
 .fresh-hint { margin: 0; color: var(--secondary, #8e8e93); font-size: var(--size-footnote, 0.8125rem); }
+
+/* share / AirDrop, top left of the open card, across from Close */
+.zoom-share {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 0.75rem);
+  left: 1.25rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px 0 12px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--zoom-glass-strong);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  color: inherit;
+  font: 600 15px/1 inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+.zoom-share svg {
+  width: 18px;
+  height: 18px;
+}
+.zoom-share:active {
+  transform: scale(0.96);
+}

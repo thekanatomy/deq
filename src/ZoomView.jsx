@@ -8,6 +8,8 @@ import { saveContact } from './contact'
 import DeqCard from './DeqCard'
 import { CloseIcon } from './icons'
 import { companyOf, roleOf } from './text'
+import { cardLink } from './share'
+import { isIOS } from './browser'
 
 const DAY = 24 * 60 * 60 * 1000
 const SPRING = { type: 'spring', bounce: 0, duration: 0.5 }
@@ -76,13 +78,13 @@ export default function ZoomView({ person, onClose }) {
     saveContact({ ...person, company: companyOf(person) && person.company, role: roleOf(person) && person.role }, followUpText(person))
   }
 
+  // shares their deq card link: it opens straight into "add this person" on any phone.
+  // On iPhone the share sheet opens with AirDrop first (a web page can't open AirDrop directly).
   async function share() {
-    const text = [person.name, [roleOf(person), companyOf(person)].filter(Boolean).join(' · '), person.linkedin && linkedinUrl(person.linkedin), person.email]
-      .filter(Boolean)
-      .join('\n')
+    const url = cardLink({ ...person, company: companyOf(person) && person.company, role: roleOf(person) && person.role })
     try {
-      if (navigator.share) await navigator.share({ title: person.name, text })
-      else await navigator.clipboard.writeText(text)
+      if (navigator.share) await navigator.share({ title: `${person.name} on deq`, url })
+      else await navigator.clipboard.writeText(url)
     } catch {
       // closed the share sheet
     }
@@ -163,6 +165,11 @@ export default function ZoomView({ person, onClose }) {
         exit={{ opacity: 0, transition: { duration: 0.25 } }}
         transition={{ duration: 0.4 }}
       />
+
+      <button className="zoom-share" onClick={share} aria-label={`Share ${person.name}'s card`}>
+        <ShareIcon />
+        <span>{isIOS ? 'AirDrop' : 'Share'}</span>
+      </button>
 
       <button className="zoom-close" aria-label="Close" onClick={onClose}>
         <CloseIcon size={20} />

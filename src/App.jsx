@@ -16,7 +16,7 @@ import Waiting from './Waiting'
 import Search from './Search'
 import MyCard from './MyCard'
 import SharedCard from './SharedCard'
-import { readCard } from './share'
+import { cardLink, readCard } from './share'
 import { isWaiting } from './filters'
 import { filtersFor } from './filters'
 import SaveSheet from './SaveSheet'
@@ -344,10 +344,10 @@ export default function App() {
   }
 
   async function shareOpen() {
-    const text = [open.name, open.role, open.company].filter(Boolean).join(' · ')
+    const url = cardLink(open)
     try {
-      if (navigator.share) await navigator.share({ title: open.name, text })
-      else await navigator.clipboard.writeText(text)
+      if (navigator.share) await navigator.share({ title: `${open.name} on deq`, url })
+      else await navigator.clipboard.writeText(url)
     } catch {
       // the share sheet was closed
     }
