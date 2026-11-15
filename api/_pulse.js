@@ -3,7 +3,7 @@
 // you about. Person-level results only when a source names both the person and the
 // company. Every fact must carry a source; nothing is ever sent for you.
 
-const MODEL = process.env.GEMINI_PULSE_MODEL || 'gemini-2.5-flash'
+const MODEL = process.env.GEMINI_PULSE_MODEL || 'gemini-3.8-flash'
 const ENDPOINT = model => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
 export class PulseError extends Error {
