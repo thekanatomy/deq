@@ -3,7 +3,8 @@
 // you about. Person-level results only when a source names both the person and the
 // company. Every fact must carry a source; nothing is ever sent for you.
 
-const MODEL = process.env.GEMINI_PULSE_MODEL || 'gemini-3.8-flash'
+// tried in order: a model with no quota left (429) or retired (404) passes to the next
+const MODELS = (process.env.GEMINI_PULSE_MODEL || 'gemini-flash-lite-latest,gemini-3.1-flash-lite,gemini-flash-latest,gemini-3.8-flash,gemini-2.5-flash-lite').split(',').map(m => m.trim())
 const ENDPOINT = model => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
 export class PulseError extends Error {
@@ -71,17 +72,22 @@ export async function sweep(body) {
   if (!card.name && !card.company) throw new PulseError('A card needs a name or company', 400)
   const since = clip(body.since, 40) || new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10)
 
-  const response = await fetch(ENDPOINT(MODEL), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: prompt({ card, since, you: body.you }) }] }],
-      tools: [{ google_search: {} }],
-      generationConfig: { temperature: 0.3 },
-    }),
-  })
+  let response, MODEL, detail = ''
+  for (MODEL of MODELS) {
+    response = await fetch(ENDPOINT(MODEL), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt({ card, since, you: body.you }) }] }],
+        tools: [{ google_search: {} }],
+        generationConfig: { temperature: 0.3 },
+      }),
+    })
+    if (response.ok) break
+    detail = await response.text().catch(() => '')
+    if (![404, 429].includes(response.status)) break
+  }
   if (!response.ok) {
-    const detail = await response.text().catch(() => '')
     throw new PulseError(`Gemini ${response.status}: ${detail.slice(0, 200)}`, response.status === 429 ? 429 : 502)
   }
   const data = await response.json()
