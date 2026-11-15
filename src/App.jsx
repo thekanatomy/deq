@@ -43,6 +43,8 @@ const PEEK = 8 // px each card shows in the bottom pile while one is open
 // Apple's motion: springs that start from wherever things are and settle without a
 // wobble. A touch of bounce only where a card is thrown into place.
 const SPRING = { type: 'spring', bounce: 0.12, duration: 0.55 }
+// the card flying into its details and back: Wallet-quick, no bounce
+const FLIGHT = { type: 'spring', bounce: 0, duration: 0.42 }
 const SETTLE = { type: 'spring', bounce: 0, duration: 0.5 }
 // buttons that swap in the top bar
 const POP = {
@@ -189,8 +191,10 @@ export default function App() {
   const [addedId, setAddedId] = useState(null)
   // the card you just added: until you close it, it carries a LinkedIn button and a hint
   const [freshId, setFreshId] = useState(null)
-  // the full-details view: it rises over the deck with a blur, the deck stays put
+  // the full-details view: flyId gives the tapped card its shared-layout id one frame
+  // before the details open, so the card flies out of the deck like Apple Wallet
   const [zoomId, setZoomId] = useState(null)
+  const [flyId, setFlyId] = useState(null)
   const [editId, setEditId] = useState(null)
   const zoomed = Boolean(zoomId)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -262,10 +266,13 @@ export default function App() {
 
   // a tap goes straight to the full details (no in-between "open card" step)
   function openCard(id) {
+    setFlyId(id)
     setEditId(null)
-    setZoomId(id)
+    requestAnimationFrame(() => requestAnimationFrame(() => setZoomId(id)))
   }
 
+  // flyId stays until the card has landed back in the deck (cleared in onLayoutAnimationComplete),
+  // so the flight is never cut off halfway
   function closeZoom() {
     setZoomId(null)
   }
@@ -581,9 +588,20 @@ export default function App() {
                   }
                 }}
               >
-                {/* no shared-layout flight: measuring a card inside the moving deck is what
-                    made the transition cut out. The details rise over the deck instead. */}
-                <DeqCard person={person} interactive={selected} open={selected || (!isOpen && index === list.length - 1)} />
+                {person.id === zoomId ? (
+                  <div className="card-placeholder" />
+                ) : (
+                  // only the flying card gets a shared-layout id; giving every card one made
+                  // the whole deck re-measure on every frame
+                  <motion.div
+                    layoutId={selected || person.id === flyId ? `card-${person.id}` : undefined}
+                    transition={FLIGHT}
+                    style={{ willChange: person.id === flyId ? 'transform' : undefined }}
+                    onLayoutAnimationComplete={() => person.id === flyId && !zoomId && setFlyId(null)}
+                  >
+                    <DeqCard person={person} interactive={selected} open={selected || (!isOpen && index === list.length - 1)} />
+                  </motion.div>
+                )}
                 {/* a quiet hint above the open card, until you've used it a few times */}
                 <AnimatePresence>
                   {selected && !zoomed && showZoomHint && (

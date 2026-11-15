@@ -12,6 +12,7 @@ import { cardLink } from './share'
 import { isIOS } from './browser'
 
 const DAY = 24 * 60 * 60 * 1000
+const SPRING = { type: 'spring', bounce: 0, duration: 0.42 } // matches the deck's FLIGHT
 const EASE = [0.32, 0.72, 0, 1]
 
 function linkedinUrl(value) {
@@ -152,11 +153,10 @@ export default function ZoomView({ person, onClose, onEdit, onRemove }) {
     <motion.div
       className={lightText ? 'zoom light-ink' : 'zoom dark-ink'}
       style={{ color: glow['--card-ink'], background: base }}
-      // Apple-style: rises out of a blur, settles with no bounce, and leaves the same way
-      initial={{ opacity: 0, scale: 0.94, filter: 'blur(14px)' }}
-      animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-      exit={{ opacity: 0, scale: 0.96, filter: 'blur(10px)', transition: { type: 'spring', bounce: 0, duration: 0.3 } }}
-      transition={{ type: 'spring', bounce: 0, duration: 0.42 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.22 } }}
+      transition={{ duration: 0.2 }}
     >
       <motion.div
         className="zoom-glow"
@@ -181,6 +181,8 @@ export default function ZoomView({ person, onClose, onEdit, onRemove }) {
       <div className="zoom-scroll" onScroll={event => event.currentTarget.scrollTop < -90 && onClose()}>
         <motion.div
           className="zoom-card"
+          layoutId={`card-${person.id}`}
+          transition={SPRING}
           style={{ rotateX, rotateY, transformPerspective: 1200 }} // its own perspective: no 3D on the scroller, so the page scrolls on iPhone
           onPointerMove={event => {
             const rect = event.currentTarget.getBoundingClientRect()
