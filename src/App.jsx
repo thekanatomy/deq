@@ -26,6 +26,7 @@ import HomeScreenSheet from './HomeScreenSheet'
 import { inAppBrowser, isAndroid, isIOS, isStandalone, recall, remember } from './browser'
 import { cameToCarry, copyDeck, markForCarry, pasteDeck } from './move'
 import { useBack } from './back'
+import PulseWallet from './PulseWallet.jsx'
 import ZoomView from './ZoomView.jsx'
 import { meshImage } from './brands'
 import { db, visible } from './db'
@@ -258,6 +259,7 @@ export default function App() {
     everyone.filter(person => person.place && Number.isFinite(person.lat)).map(person => [person.place, { lat: person.lat, lng: person.lng }]),
   )
   const open = isOpen ? list[openIndex] : null
+  const walletOn = !isOpen && list.length > 0 // deq pulse: one card in front, its pulse below
   const added = list.find(person => person.id === addedId)
   const openLook = open ? { backgroundImage: meshImage(open.company) } : null
 
@@ -527,10 +529,12 @@ export default function App() {
           </div>
         </header>
 
+        {walletOn && <PulseWallet people={list} onOpen={person => { setOpenId(person.id); setZoomed(true); learnedZoom() }} />}
+
         <motion.section
           className="deck"
           ref={deckRef}
-          style={{ height: deckHeight }}
+          style={walletOn ? { height: 0, margin: 0, visibility: 'hidden' } : { height: deckHeight }}
           initial={false}
           // Wallet: the deck slides up over the folded title, so the open card sits at the top.
           // Only a transform moves, so nothing on the page has to be laid out again.
