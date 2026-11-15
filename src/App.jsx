@@ -259,7 +259,7 @@ export default function App() {
     everyone.filter(person => person.place && Number.isFinite(person.lat)).map(person => [person.place, { lat: person.lat, lng: person.lng }]),
   )
   const open = isOpen ? list[openIndex] : null
-  const walletOn = !isOpen && list.length > 0 // deq pulse: one card in front, its pulse below
+  const walletOn = list.length > 0 // deq pulse: one card in front, its pulse below
   const added = list.find(person => person.id === addedId)
   const openLook = open ? { backgroundImage: meshImage(open.company) } : null
 
@@ -436,7 +436,7 @@ export default function App() {
                 </motion.button>
               ) : (
                 <motion.h1 key="title" className="top-name" {...POP}>
-                  {empty ? '' : 'deq'}
+                  {empty ? '' : 'pulse'}
                 </motion.h1>
               )}
             </AnimatePresence>
@@ -801,7 +801,7 @@ export default function App() {
           />
         )}
         {gateApp && <InAppGate key="gate" app={gateApp} onContinue={() => setGateApp(null)} />}
-        {zoomed && open && <ZoomView key="zoom" person={open} onClose={() => setZoomed(false)} />}
+        {zoomed && open && <ZoomView key="zoom" person={open} onClose={() => { setZoomed(false); setOpenId(null) }} />}
         {askToSave && !account.user && (
           <SaveSheet
             key="save"
