@@ -189,7 +189,12 @@ export default function App() {
   const [addedId, setAddedId] = useState(null)
   // the card you just added: until you close it, it carries a LinkedIn button and a hint
   const [freshId, setFreshId] = useState(null)
-  const [zoomed, setZoomed] = useState(false)
+  // the full-details view: flyId gives the tapped card its shared-layout id one frame
+  // before the details open, so the card flies out of the deck instead of popping in
+  const [zoomId, setZoomId] = useState(null)
+  const [flyId, setFlyId] = useState(null)
+  const [editId, setEditId] = useState(null)
+  const zoomed = Boolean(zoomId)
   const [menuOpen, setMenuOpen] = useState(false)
   const [owner, setOwner] = useState(readOwner)
 
@@ -253,19 +258,25 @@ export default function App() {
   const placeCoords = Object.fromEntries(
     everyone.filter(person => person.place && Number.isFinite(person.lat)).map(person => [person.place, { lat: person.lat, lng: person.lng }]),
   )
-  const open = isOpen ? list[openIndex] : null
+  const open = isOpen ? list[openIndex] : everyone.find(person => person.id === (zoomId ?? editId)) ?? null
   const added = list.find(person => person.id === addedId)
-  const openLook = open ? { backgroundImage: meshImage(open.company) } : null
+  const openLook = open && (isOpen || zoomed) ? { backgroundImage: meshImage(open.company) } : null
 
   // a tap goes straight to the full details (no in-between "open card" step)
   function openCard(id) {
-    setOpenId(id)
-    setZoomed(true)
+    setFlyId(id)
+    setEditId(null)
+    requestAnimationFrame(() => requestAnimationFrame(() => setZoomId(id)))
+  }
+
+  function closeZoom() {
+    setZoomId(null)
+    setTimeout(() => setFlyId(null), 700)
   }
 
   // Back on the phone closes the top layer instead of leaving deq (the add flow handles its own steps)
   useBack(Boolean(openId), () => closeCard())
-  useBack(zoomed, () => { setZoomed(false); setOpenId(null) })
+  useBack(zoomed, closeZoom)
   useBack(detailsOpen, () => setDetailsOpen(false))
   useBack(view === 'scan' || view === 'edit', () => setView('deck'))
   useBack(menuOpen, () => setMenuOpen(false))
@@ -279,13 +290,13 @@ export default function App() {
 
   function closeCard() {
     setFreshId(null)
-    setZoomed(false)
+    setZoomId(null)
     setDetailsOpen(false)
     setOpenId(null)
   }
 
   async function removeOpen() {
-    await removeCard(openId)
+    await removeCard(open.id)
     closeCard()
   }
 
@@ -323,7 +334,7 @@ export default function App() {
 
   async function saveEdit(fields) {
     const { name, role, company, place, linkedin, email, note } = fields
-    await db.cards.update(openId, withShortText({ name, role, company, place, linkedin, email, note }))
+    await db.cards.update(open.id, withShortText({ name, role, company, place, linkedin, email, note }))
     setDraft({})
     setView('deck')
   }
@@ -556,7 +567,7 @@ export default function App() {
                   if (selected) {
                     // tapping the card itself (not one of its buttons) lifts it into the zoom view
                     if (!event.target.closest('button, a, input, form')) {
-                      setZoomed(true)
+                      openCard(person.id)
                       learnedZoom()
                     }
                     return
@@ -574,13 +585,13 @@ export default function App() {
                   }
                 }}
               >
-                {selected && zoomed ? (
+                {person.id === zoomId ? (
                   <div className="card-placeholder" />
                 ) : (
                   // Only the open card needs a shared-layout id (for flying into the zoom view).
                   // Giving every card one made the animation library re-measure the whole deck on
                   // every frame, which is what made opening a card stutter.
-                  <motion.div layoutId={selected ? `card-${person.id}` : undefined} transition={SPRING}>
+                  <motion.div layoutId={selected || person.id === flyId ? `card-${person.id}` : undefined} transition={SPRING}>
                     <DeqCard
                       person={person}
                       interactive={selected}
@@ -794,7 +805,23 @@ export default function App() {
           />
         )}
         {gateApp && <InAppGate key="gate" app={gateApp} onContinue={() => setGateApp(null)} />}
-        {zoomed && open && <ZoomView key="zoom" person={open} onClose={() => { setZoomed(false); setOpenId(null) }} />}
+        {zoomed && open && (
+          <ZoomView
+            key="zoom"
+            person={open}
+            onClose={closeZoom}
+            onEdit={() => {
+              setEditId(zoomId)
+              closeZoom()
+              setView('edit')
+            }}
+            onRemove={async () => {
+              const id = zoomId
+              closeZoom()
+              await removeCard(id)
+            }}
+          />
+        )}
         {askToSave && !account.user && (
           <SaveSheet
             key="save"

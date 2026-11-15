@@ -38,7 +38,8 @@ const VIBE_COLOURS = ['#FF3B30', '#FF9500', '#F2B600', '#A3D94B', '#34C759']
 
 // The person, up close. The card flies up from the deck; under it, their details
 // (left-aligned, like Apple's contact cards) and round actions to stay in touch.
-export default function ZoomView({ person, onClose }) {
+export default function ZoomView({ person, onClose, onEdit, onRemove }) {
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const brand = brandStyle(person.company)
   const glow = brand ?? { '--card-background': 'var(--deq-gradient)', '--card-ink': '#fff' }
   const lightText = glow['--card-ink'].startsWith('#fff') || glow['--card-ink'].startsWith('rgba(255')
@@ -308,6 +309,20 @@ export default function ZoomView({ person, onClose }) {
           {more.map(action => (
             <Circle key={action.id} action={action} />
           ))}
+        </motion.div>
+
+        {/* edit, and delete that asks for a second tap */}
+        <motion.div className="zoom-manage" {...item(9)}>
+          {onEdit && <button onClick={onEdit}>Edit Card</button>}
+          {onRemove && (
+            <button
+              className={confirmDelete ? 'danger armed' : 'danger'}
+              onClick={() => (confirmDelete ? onRemove() : setConfirmDelete(true))}
+              onBlur={() => setConfirmDelete(false)}
+            >
+              {confirmDelete ? `Tap again to delete ${first}` : 'Delete Card'}
+            </button>
+          )}
         </motion.div>
       </div>
 

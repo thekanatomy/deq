@@ -6130,3 +6130,31 @@ html.sideways body {
 .zoom-share:active {
   transform: scale(0.96);
 }
+
+/* edit / delete at the end of a card's details */
+.zoom-manage {
+  display: grid;
+  gap: 10px;
+  margin: 2rem 0 calc(env(safe-area-inset-bottom) + 2rem);
+}
+.zoom-manage button {
+  height: 50px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--zoom-glass-strong);
+  color: inherit;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.zoom-manage button.danger {
+  color: #ff6961;
+}
+.zoom-manage button.armed {
+  background: #ff3b30;
+  color: #fff;
+}
+.zoom-manage button:active {
+  transform: scale(0.98);
+}
