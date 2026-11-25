@@ -5,6 +5,7 @@ import DeqCard from './DeqCard'
 import { CloseIcon } from './icons'
 import { loadMe, saveMe } from './me'
 import { cardCode, cardLink } from './share'
+import { api } from './native'
 
 const FIELDS = [
   { key: 'name', label: 'Name', placeholder: 'Your name', autoCapitalize: 'words' },
@@ -33,7 +34,7 @@ export default function MyCard({ owner, onClose }) {
     saveMe(me)
     // a plain navigation, so the phone opens the pass in its own wallet:
     // Apple's "Add to Apple Wallet" sheet, or Google Wallet's save page
-    window.location.href = `/api/pass?card=${cardCode(me)}${isAndroid ? '&to=google' : ''}`
+    window.location.href = api(`/api/pass?card=${cardCode(me)}${isAndroid ? '&to=google' : ''}`)
   }
 
   async function share() {

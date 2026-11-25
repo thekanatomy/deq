@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import '@fontsource-variable/inter'
 import './index.css'
 import App from './App.jsx'
+import { isNative } from './native'
 import { watchForUpdates } from './update'
 import { busy } from './draft'
 
@@ -51,10 +52,10 @@ if (import.meta.env.PROD) {
 
 // The offline copy (public build only): a phone that has opened deq before can open
 // it again when the network fails, or on a Wi-Fi that blocks deq.one.
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+if (import.meta.env.PROD && !isNative && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}))
 }
-watchForUpdates()
+if (!isNative) watchForUpdates() // the iPhone app updates through the App Store
 
 // which version is running, for checking a phone: open the browser's console
 console.info(`deq build ${__BUILD__}`)

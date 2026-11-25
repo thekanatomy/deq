@@ -2,6 +2,7 @@ import { motion } from 'motion/react'
 import { useEffect } from 'react'
 import { linkedinUrl } from './contact'
 import DeqCard from './DeqCard'
+import { haptic } from './native'
 
 // Apple Wallet's confirmation: the new card large, a checkmark drawn beside the title,
 // then it hands off to the deck on its own.
@@ -26,6 +27,7 @@ export default function AddedMoment({ person, onDone }) {
   const hasLink = Boolean(link)
   useEffect(() => {
     navigator.vibrate?.([15, 60, 25])
+    haptic.success()
     // the timer only runs while deq is on screen: picking Apple Calendar opens another
     // app, and coming back should still find this screen and its LinkedIn button
     let timer = null

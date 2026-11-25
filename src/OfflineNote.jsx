@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
+import { api } from './native'
 
 // An orange pill at the top centre, there until the connection is back, when deq.one can't be reached: offline, or a Wi-Fi that blocks it
 // (the phone still shows Wi-Fi then, so deq asks /api/ping instead of trusting it).
@@ -7,7 +8,7 @@ import { useEffect, useState } from 'react'
 async function reachable() {
   if (!navigator.onLine) return false
   try {
-    const response = await fetch('/api/ping', { cache: 'no-store', signal: AbortSignal.timeout(5000) })
+    const response = await fetch(api('/api/ping'), { cache: 'no-store', signal: AbortSignal.timeout(5000) })
     return response.ok
   } catch {
     return false

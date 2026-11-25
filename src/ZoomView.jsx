@@ -10,6 +10,7 @@ import { CloseIcon } from './icons'
 import { companyOf, roleOf } from './text'
 import { cardLink } from './share'
 import { isIOS } from './browser'
+import { haptic } from './native'
 
 const DAY = 24 * 60 * 60 * 1000
 const SPRING = { type: 'spring', bounce: 0, duration: 0.42 } // matches the deck's FLIGHT
@@ -95,6 +96,7 @@ export default function ZoomView({ person, onClose, onEdit, onRemove }) {
     await db.cards.update(person.id, spokeNow(person, 'In person'))
     setSpoke(true)
     navigator.vibrate?.(12)
+    haptic.success()
   }
 
   function showOnMap() {
@@ -317,7 +319,7 @@ export default function ZoomView({ person, onClose, onEdit, onRemove }) {
           {onRemove && (
             <button
               className={confirmDelete ? 'danger armed' : 'danger'}
-              onClick={() => (confirmDelete ? onRemove() : setConfirmDelete(true))}
+              onClick={() => (confirmDelete ? (haptic.firm(), onRemove()) : (haptic.warning(), setConfirmDelete(true)))}
               onBlur={() => setConfirmDelete(false)}
             >
               {confirmDelete ? `Tap again to delete ${first}` : 'Delete Card'}

@@ -2,6 +2,7 @@
 // Apple Calendar gets an .ics event from /api/ics, Android gets an intent that opens
 // its calendar app on a filled-in event, and Google Calendar gets its new-event page.
 import { isAndroid } from './browser'
+import { api } from './native'
 
 const DAY = 24 * 60 * 60 * 1000
 const pad = n => String(n).padStart(2, '0')
@@ -54,7 +55,7 @@ function eventId(person, start) {
 function appleCalendar(person) {
   const { title, start, end, details } = event(person)
   const params = new URLSearchParams({ title, start: stamp(start), end: stamp(end), details, uid: eventId(person, start) })
-  window.location.href = `/api/ics?${params}`
+  window.location.href = api(`/api/ics?${params}`)
 }
 
 function androidCalendar(person, app) {

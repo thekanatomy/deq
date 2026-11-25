@@ -31,6 +31,7 @@ import { meshImage } from './brands'
 import { db, visible } from './db'
 import { withShortText } from './text'
 import { accountsEnabled, removeCard, useAccount } from './sync'
+import { haptic } from './native'
 
 // The scanner pulls in the QR decoder, so it only loads when + is tapped.
 const Scanner = lazy(() => import('./Scanner'))
@@ -266,6 +267,7 @@ export default function App() {
 
   // a tap goes straight to the full details (no in-between "open card" step)
   function openCard(id) {
+    haptic.tap()
     setFlyId(id)
     setEditId(null)
     requestAnimationFrame(() => requestAnimationFrame(() => setZoomId(id)))

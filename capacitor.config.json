@@ -1,0 +1,9 @@
+{
+  "appId": "one.deq.app",
+  "appName": "deq",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#F5F5F7"
+  }
+}
